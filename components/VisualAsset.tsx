@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface VisualAssetProps {
   name: string;
@@ -21,10 +21,6 @@ export function VisualAsset({
 }: VisualAssetProps) {
   const [failedPath, setFailedPath] = useState<string | null>(null);
   const shouldShowPlaceholder = !imagePath || failedPath === imagePath;
-
-  useEffect(() => {
-    setFailedPath(null);
-  }, [imagePath]);
 
   return (
     <div className={`relative overflow-hidden bg-slate-950 ${className}`}>
@@ -51,6 +47,7 @@ export function VisualAsset({
         </div>
       ) : (
         // Plain img tags are easiest for local user-supplied files in /public.
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           alt={name}
           className={`absolute inset-0 h-full w-full ${imageClassName}`}

@@ -87,6 +87,7 @@ export function useTerradorState() {
   const channelRef = useRef<BroadcastChannel | null>(null);
   const sourceId = useRef(createId("dm-session"));
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const initialState = loadState();
     setState(initialState);
@@ -119,6 +120,7 @@ export function useTerradorState() {
       channelRef.current?.close();
     };
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const publishState = useCallback((updater: StateUpdater) => {
     setState((previous) => {

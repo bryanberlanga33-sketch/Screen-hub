@@ -519,7 +519,6 @@ export function DmControlCenter() {
     addScene,
     updateScene,
     deleteScene,
-    setBlackout,
     toggleBlackout,
     addLayer,
     updateLayer,
