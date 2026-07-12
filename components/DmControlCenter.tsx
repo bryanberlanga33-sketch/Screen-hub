@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { DISPLAY_DEFINITIONS } from "@/data/defaultScenes";
 import type {
   DisplayTarget,
@@ -8,7 +8,9 @@ import type {
   LayerPosition,
   Scene,
 } from "@/types/terrador";
+import { ImageCropper } from "./ImageCropper";
 import { MarchingOrderEditor } from "./MarchingOrderEditor";
+import { readFileAsDataUrl } from "./imageUpload";
 import { STORAGE_KEY, useTerradorState } from "./useTerradorState";
 import { VisualAsset } from "./VisualAsset";
 
@@ -219,6 +221,38 @@ function SceneEditor({
   onUpdateScene,
   onDeleteScene,
 }: SceneEditorProps) {
+  const [cropRequest, setCropRequest] = useState<{
+    sceneId: string;
+    sceneName: string;
+    source: string;
+  } | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleSceneFileChange = async (
+    event: ChangeEvent<HTMLInputElement>,
+    scene: Scene,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    setUploadError(null);
+
+    try {
+      const source = await readFileAsDataUrl(file);
+      setCropRequest({
+        sceneId: scene.id,
+        sceneName: scene.name,
+        source,
+      });
+    } catch {
+      setUploadError("Could not read that screen image.");
+    }
+  };
+
   return (
     <section className="rune-panel rounded-3xl p-5">
       <div className="relative z-10">
@@ -245,6 +279,36 @@ function SceneEditor({
               >
                 {isEditing ? (
                   <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="grid gap-4 rounded-2xl border border-cyan-100/14 bg-slate-950/50 p-3 md:grid-cols-[minmax(0,1fr)_17rem] lg:col-span-2">
+                      <VisualAsset
+                        name={scene.name}
+                        imagePath={scene.imagePath}
+                        className="aspect-video rounded-xl border border-cyan-100/15"
+                        compact
+                      />
+                      <div className="grid content-center gap-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.2em] text-cyan-300/70">
+                            Screen Crop
+                          </p>
+                          <p className="mt-1 text-sm text-slate-300">
+                            Upload a photo and crop it to the 16:9 screen frame
+                            saved at 1280 x 720.
+                          </p>
+                        </div>
+                        <label className="steel-button cursor-pointer text-center">
+                          Upload &amp; Crop Screen Photo
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(event) =>
+                              handleSceneFileChange(event, scene)
+                            }
+                          />
+                        </label>
+                      </div>
+                    </div>
                     <label className="grid gap-1 text-sm text-cyan-100">
                       Scene name
                       <input
@@ -308,6 +372,11 @@ function SceneEditor({
                         }
                       />
                     </label>
+                    {uploadError ? (
+                      <p className="text-xs text-red-300 lg:col-span-2">
+                        {uploadError}
+                      </p>
+                    ) : null}
                     <div className="flex flex-wrap gap-2 lg:col-span-2">
                       <button
                         className="steel-button"
@@ -382,6 +451,21 @@ function SceneEditor({
             );
           })}
         </div>
+        {cropRequest ? (
+          <ImageCropper
+            title={`Crop ${cropRequest.sceneName} for screen`}
+            source={cropRequest.source}
+            outputWidth={1280}
+            outputHeight={720}
+            aspectLabel="16:9 screen"
+            applyLabel="Use Cropped Screen Photo"
+            onApply={(dataUrl) => {
+              onUpdateScene(cropRequest.sceneId, { imagePath: dataUrl });
+              setCropRequest(null);
+            }}
+            onCancel={() => setCropRequest(null)}
+          />
+        ) : null}
       </div>
     </section>
   );

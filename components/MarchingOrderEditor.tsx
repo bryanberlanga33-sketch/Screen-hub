@@ -14,7 +14,8 @@ import type {
   MarchingOrderPosition,
   MarchingOrderState,
 } from "@/types/terrador";
-import { fileToResizedDataUrl } from "./imageUpload";
+import { ImageCropper } from "./ImageCropper";
+import { readFileAsDataUrl } from "./imageUpload";
 import { VisualAsset } from "./VisualAsset";
 
 const KIND_OPTIONS: { value: CombatantKind; label: string }[] = [
@@ -78,6 +79,7 @@ function CombatantRow({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [cropSource, setCropSource] = useState<string | null>(null);
 
   const handleFileChange = async (
     event: ChangeEvent<HTMLInputElement>,
@@ -91,8 +93,8 @@ function CombatantRow({
     setUploadError(null);
     setUploading(true);
     try {
-      const dataUrl = await fileToResizedDataUrl(file);
-      onUpdate({ image: dataUrl });
+      const dataUrl = await readFileAsDataUrl(file);
+      setCropSource(dataUrl);
     } catch {
       setUploadError("Could not read that image.");
     } finally {
@@ -101,145 +103,165 @@ function CombatantRow({
   };
 
   return (
-    <article
-      className={`rounded-2xl border bg-slate-950/58 p-4 ${
-        isActive
-          ? "border-amber-300/70 shadow-[0_0_22px_rgba(245,214,123,0.18)]"
-          : "border-cyan-100/14"
-      }`}
-    >
-      <div className="grid gap-4 md:grid-cols-[6rem_1fr] md:items-start">
-        <div className="grid gap-2">
-          <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-cyan-100/15">
-            <VisualAsset
-              name={combatant.name}
-              imagePath={combatant.image}
-              className="h-full w-full"
-              compact
+    <>
+      <article
+        className={`rounded-2xl border bg-slate-950/58 p-4 ${
+          isActive
+            ? "border-amber-300/70 shadow-[0_0_22px_rgba(245,214,123,0.18)]"
+            : "border-cyan-100/14"
+        }`}
+      >
+        <div className="grid gap-4 md:grid-cols-[6rem_1fr] md:items-start">
+          <div className="grid gap-2">
+            <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-cyan-100/15">
+              <VisualAsset
+                name={combatant.name}
+                imagePath={combatant.image}
+                className="h-full w-full"
+                compact
+              />
+            </div>
+            <p className="text-center text-[0.65rem] uppercase tracking-[0.14em] text-cyan-200/70">
+              Square crop
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
             />
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          <button
-            className="steel-button quiet-button py-2 text-xs"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? "Loading..." : "Upload"}
-          </button>
-          {combatant.image ? (
             <button
               className="steel-button quiet-button py-2 text-xs"
-              onClick={() => onUpdate({ image: "" })}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
             >
-              Clear Picture
+              {uploading ? "Loading..." : "Upload & Crop"}
             </button>
-          ) : null}
-        </div>
-
-        <div className="grid gap-3">
-          <div className="grid gap-3 sm:grid-cols-[1fr_9rem]">
-            <label className="grid gap-1 text-sm text-cyan-100">
-              Name
-              <input
-                className="steel-input"
-                value={combatant.name}
-                onChange={(event) => onUpdate({ name: event.target.value })}
-              />
-            </label>
-            <label className="grid gap-1 text-sm text-cyan-100">
-              Role
-              <select
-                className="steel-input"
-                value={combatant.kind}
-                onChange={(event) =>
-                  onUpdate({ kind: event.target.value as CombatantKind })
-                }
+            {combatant.image ? (
+              <button
+                className="steel-button quiet-button py-2 text-xs"
+                onClick={() => onUpdate({ image: "" })}
               >
-                {KIND_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+                Clear Picture
+              </button>
+            ) : null}
           </div>
 
-          {uploadError ? (
-            <p className="text-xs text-red-300">{uploadError}</p>
-          ) : null}
+          <div className="grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-[1fr_9rem]">
+              <label className="grid gap-1 text-sm text-cyan-100">
+                Name
+                <input
+                  className="steel-input"
+                  value={combatant.name}
+                  onChange={(event) => onUpdate({ name: event.target.value })}
+                />
+              </label>
+              <label className="grid gap-1 text-sm text-cyan-100">
+                Role
+                <select
+                  className="steel-input"
+                  value={combatant.kind}
+                  onChange={(event) =>
+                    onUpdate({ kind: event.target.value as CombatantKind })
+                  }
+                >
+                  {KIND_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
-          <div className="grid gap-1 text-sm text-cyan-100">
-            Conditions / effects
+            {uploadError ? (
+              <p className="text-xs text-red-300">{uploadError}</p>
+            ) : null}
+
+            <div className="grid gap-1 text-sm text-cyan-100">
+              Conditions / effects
+              <div className="flex flex-wrap gap-2">
+                {conditions.length === 0 ? (
+                  <span className="text-xs text-slate-400">
+                    Add conditions in the palette below.
+                  </span>
+                ) : (
+                  conditions.map((condition) => {
+                    const active = combatant.conditionIds.includes(condition.id);
+                    return (
+                      <button
+                        key={condition.id}
+                        className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold transition"
+                        style={{
+                          borderColor: condition.color,
+                          backgroundColor: active
+                            ? `${condition.color}33`
+                            : "transparent",
+                          color: active ? "#f8fbff" : "rgba(226,240,255,0.65)",
+                        }}
+                        onClick={() => onToggleCondition(condition.id)}
+                      >
+                        <span
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: condition.color }}
+                        />
+                        {condition.label}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-2">
-              {conditions.length === 0 ? (
-                <span className="text-xs text-slate-400">
-                  Add conditions in the palette below.
-                </span>
-              ) : (
-                conditions.map((condition) => {
-                  const active = combatant.conditionIds.includes(condition.id);
-                  return (
-                    <button
-                      key={condition.id}
-                      className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold transition"
-                      style={{
-                        borderColor: condition.color,
-                        backgroundColor: active
-                          ? `${condition.color}33`
-                          : "transparent",
-                        color: active ? "#f8fbff" : "rgba(226,240,255,0.65)",
-                      }}
-                      onClick={() => onToggleCondition(condition.id)}
-                    >
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: condition.color }}
-                      />
-                      {condition.label}
-                    </button>
-                  );
-                })
-              )}
+              <button
+                className={`steel-button py-2 text-xs ${isActive ? "" : "quiet-button"}`}
+                onClick={onSetActive}
+              >
+                {isActive ? "Current Turn" : "Set Current Turn"}
+              </button>
+              <button
+                className="steel-button quiet-button py-2 text-xs"
+                onClick={() => onMove(-1)}
+                disabled={index === 0}
+              >
+                Move Up
+              </button>
+              <button
+                className="steel-button quiet-button py-2 text-xs"
+                onClick={() => onMove(1)}
+                disabled={index === total - 1}
+              >
+                Move Down
+              </button>
+              <button
+                className="steel-button danger-button py-2 text-xs"
+                onClick={onDelete}
+              >
+                Remove
+              </button>
             </div>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              className={`steel-button py-2 text-xs ${isActive ? "" : "quiet-button"}`}
-              onClick={onSetActive}
-            >
-              {isActive ? "Current Turn" : "Set Current Turn"}
-            </button>
-            <button
-              className="steel-button quiet-button py-2 text-xs"
-              onClick={() => onMove(-1)}
-              disabled={index === 0}
-            >
-              Move Up
-            </button>
-            <button
-              className="steel-button quiet-button py-2 text-xs"
-              onClick={() => onMove(1)}
-              disabled={index === total - 1}
-            >
-              Move Down
-            </button>
-            <button
-              className="steel-button danger-button py-2 text-xs"
-              onClick={onDelete}
-            >
-              Remove
-            </button>
-          </div>
         </div>
-      </div>
-    </article>
+      </article>
+      {cropSource ? (
+        <ImageCropper
+          title={`Crop ${combatant.name} portrait`}
+          source={cropSource}
+          outputWidth={320}
+          outputHeight={320}
+          aspectLabel="1:1 marching order portrait"
+          applyLabel="Use Cropped Portrait"
+          onApply={(dataUrl) => {
+            onUpdate({ image: dataUrl });
+            setCropSource(null);
+          }}
+          onCancel={() => setCropSource(null)}
+        />
+      ) : null}
+    </>
   );
 }
 
