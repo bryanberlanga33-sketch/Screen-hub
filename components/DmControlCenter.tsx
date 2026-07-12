@@ -263,7 +263,7 @@ function SceneEditor({
                       <span>Image path or library asset</span>
                       <div className="flex gap-2">
                         <input
-                          className="steel-input"
+                          className="steel-input min-w-0 flex-1"
                           value={scene.imagePath}
                           onChange={(event) =>
                             onUpdateScene(scene.id, {
@@ -273,7 +273,7 @@ function SceneEditor({
                         />
                         <button
                           type="button"
-                          className="steel-button quiet-button whitespace-nowrap px-3 text-xs"
+                          className="steel-button quiet-button shrink-0 whitespace-nowrap px-3 text-xs"
                           onClick={() => setPickerSceneId(scene.id)}
                         >
                           Library
@@ -468,7 +468,7 @@ function LayerEditor({
                 <span>Image path or library asset</span>
                 <div className="flex gap-2">
                   <input
-                    className="steel-input"
+                    className="steel-input min-w-0 flex-1"
                     value={layer.imagePath}
                     onChange={(event) =>
                       onUpdateLayer(layer.id, { imagePath: event.target.value })
@@ -476,7 +476,7 @@ function LayerEditor({
                   />
                   <button
                     type="button"
-                    className="steel-button quiet-button whitespace-nowrap px-3 text-xs"
+                    className="steel-button quiet-button shrink-0 whitespace-nowrap px-3 text-xs"
                     onClick={() => setPickerLayerId(layer.id)}
                   >
                     Library
