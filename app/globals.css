@@ -107,6 +107,66 @@ textarea {
   background: rgba(15, 23, 42, 0.82);
 }
 
+.collapsible-shell {
+  overflow: hidden;
+}
+
+.collapsible-trigger {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+  color: inherit;
+  text-align: left;
+}
+
+.collapsible-trigger:hover {
+  background: rgba(14, 116, 144, 0.12);
+}
+
+.collapsible-trigger:focus-visible {
+  outline: 2px solid rgba(103, 232, 249, 0.8);
+  outline-offset: -0.35rem;
+}
+
+.collapsible-status {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(125, 211, 252, 0.25);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.82);
+  padding: 0.45rem 0.7rem;
+  color: #bae6fd;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.collapsible-chevron {
+  display: inline-block;
+  transform: rotate(-90deg);
+  transition: transform 160ms ease;
+}
+
+.collapsible-chevron.is-open {
+  transform: rotate(0deg);
+}
+
+.collapsible-body {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  gap: 1rem;
+  padding: 0 1rem 1rem;
+}
+
 /* --- Marching / combat order overlay (Clair Obscur: Expedition 33 style) --- */
 .marching-order-strip {
   --marching-edge: clamp(0.75rem, 2.2vw, 2.5rem);
