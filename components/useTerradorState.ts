@@ -4,14 +4,32 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DEFAULT_DISPLAYS,
   DEFAULT_LAYERS,
+  DEFAULT_MARCHING_ORDER,
   DEFAULT_SCENES,
 } from "@/data/defaultScenes";
 import type {
+  Combatant,
+  CombatantKind,
+  ConditionType,
+  DisplaysState,
+  DisplayState,
   DisplayTarget,
   FloatingLayer,
+  MarchingOrderState,
   Scene,
   TerradorState,
 } from "@/types/terrador";
+
+const CONDITION_SWATCHES = [
+  "#38bdf8",
+  "#f97316",
+  "#a855f7",
+  "#22c55e",
+  "#ef4444",
+  "#eab308",
+  "#ec4899",
+  "#14b8a6",
+];
 
 const STORAGE_KEY = "terrador-control-center-state-v1";
 const CHANNEL_NAME = "terrador-control-center";
@@ -29,6 +47,7 @@ function createDefaultState(): TerradorState {
     scenes: DEFAULT_SCENES,
     layers: DEFAULT_LAYERS,
     displays: DEFAULT_DISPLAYS,
+    marchingOrder: DEFAULT_MARCHING_ORDER,
   };
 }
 
@@ -45,16 +64,97 @@ function createId(label: string) {
   return `${safeLabel || "terrador"}-${randomSuffix}`;
 }
 
+function normalizeDisplayState(
+  saved: Partial<DisplayState> | undefined,
+  fallback: DisplayState,
+): DisplayState {
+  return {
+    activeSceneId:
+      saved && "activeSceneId" in saved
+        ? (saved.activeSceneId ?? null)
+        : fallback.activeSceneId,
+    blackout: Boolean(saved?.blackout),
+    showMarchingOrder: Boolean(saved?.showMarchingOrder),
+  };
+}
+
+function normalizeDisplays(
+  saved: Partial<DisplaysState> | undefined,
+): DisplaysState {
+  const fallback = DEFAULT_DISPLAYS;
+
+  return {
+    "player-art": normalizeDisplayState(
+      saved?.["player-art"],
+      fallback["player-art"],
+    ),
+    "battle-map": normalizeDisplayState(
+      saved?.["battle-map"],
+      fallback["battle-map"],
+    ),
+    secondary: normalizeDisplayState(saved?.secondary, fallback.secondary),
+  };
+}
+
+function normalizeMarchingOrder(
+  saved: Partial<MarchingOrderState> | undefined,
+): MarchingOrderState {
+  if (!saved || typeof saved !== "object") {
+    return DEFAULT_MARCHING_ORDER;
+  }
+
+  const conditions: ConditionType[] = Array.isArray(saved.conditions)
+    ? saved.conditions
+        .filter((condition): condition is ConditionType => Boolean(condition?.id))
+        .map((condition) => ({
+          id: String(condition.id),
+          label: String(condition.label ?? "Condition"),
+          color: String(condition.color ?? "#38bdf8"),
+        }))
+    : DEFAULT_MARCHING_ORDER.conditions;
+
+  const conditionIdSet = new Set(conditions.map((condition) => condition.id));
+
+  const combatants: Combatant[] = Array.isArray(saved.combatants)
+    ? saved.combatants
+        .filter((combatant): combatant is Combatant => Boolean(combatant?.id))
+        .map((combatant) => ({
+          id: String(combatant.id),
+          name: String(combatant.name ?? "Unnamed"),
+          image: typeof combatant.image === "string" ? combatant.image : "",
+          kind: (["player", "ally", "enemy"] as CombatantKind[]).includes(
+            combatant.kind,
+          )
+            ? combatant.kind
+            : "player",
+          conditionIds: Array.isArray(combatant.conditionIds)
+            ? combatant.conditionIds.filter((id) => conditionIdSet.has(id))
+            : [],
+        }))
+    : DEFAULT_MARCHING_ORDER.combatants;
+
+  const activeCombatantId =
+    saved.activeCombatantId &&
+    combatants.some((combatant) => combatant.id === saved.activeCombatantId)
+      ? saved.activeCombatantId
+      : (combatants[0]?.id ?? null);
+
+  return {
+    title: typeof saved.title === "string" ? saved.title : DEFAULT_MARCHING_ORDER.title,
+    combatants,
+    conditions,
+    activeCombatantId,
+  };
+}
+
 function normalizeState(state: TerradorState): TerradorState {
   const defaultState = createDefaultState();
 
   return {
     scenes: Array.isArray(state.scenes) ? state.scenes : defaultState.scenes,
     layers: Array.isArray(state.layers) ? state.layers : defaultState.layers,
-    displays: {
-      ...defaultState.displays,
-      ...(state.displays ?? {}),
-    },
+    displays: normalizeDisplays(state.displays),
+    marchingOrder: normalizeMarchingOrder(state.marchingOrder),
   };
 }
 
@@ -343,6 +443,235 @@ export function useTerradorState() {
     [publishState],
   );
 
+  const updateMarchingOrder = useCallback(
+    (updater: (previous: MarchingOrderState) => MarchingOrderState) => {
+      publishState((previous) => ({
+        ...previous,
+        marchingOrder: updater(previous.marchingOrder),
+      }));
+    },
+    [publishState],
+  );
+
+  const setMarchingOrderTitle = useCallback(
+    (title: string) => {
+      updateMarchingOrder((previous) => ({ ...previous, title }));
+    },
+    [updateMarchingOrder],
+  );
+
+  const addCombatant = useCallback(
+    (kind: CombatantKind) => {
+      const newCombatant: Combatant = {
+        id: createId(kind),
+        name:
+          kind === "enemy"
+            ? "New Enemy"
+            : kind === "ally"
+              ? "New Ally"
+              : "New Hero",
+        image: "",
+        kind,
+        conditionIds: [],
+      };
+
+      updateMarchingOrder((previous) => ({
+        ...previous,
+        combatants: [...previous.combatants, newCombatant],
+        activeCombatantId: previous.activeCombatantId ?? newCombatant.id,
+      }));
+
+      return newCombatant.id;
+    },
+    [updateMarchingOrder],
+  );
+
+  const updateCombatant = useCallback(
+    (combatantId: string, patch: Partial<Omit<Combatant, "id">>) => {
+      updateMarchingOrder((previous) => ({
+        ...previous,
+        combatants: previous.combatants.map((combatant) =>
+          combatant.id === combatantId
+            ? { ...combatant, ...patch }
+            : combatant,
+        ),
+      }));
+    },
+    [updateMarchingOrder],
+  );
+
+  const deleteCombatant = useCallback(
+    (combatantId: string) => {
+      updateMarchingOrder((previous) => {
+        const nextCombatants = previous.combatants.filter(
+          (combatant) => combatant.id !== combatantId,
+        );
+
+        return {
+          ...previous,
+          combatants: nextCombatants,
+          activeCombatantId:
+            previous.activeCombatantId === combatantId
+              ? (nextCombatants[0]?.id ?? null)
+              : previous.activeCombatantId,
+        };
+      });
+    },
+    [updateMarchingOrder],
+  );
+
+  const moveCombatant = useCallback(
+    (combatantId: string, direction: 1 | -1) => {
+      updateMarchingOrder((previous) => {
+        const index = previous.combatants.findIndex(
+          (combatant) => combatant.id === combatantId,
+        );
+        const targetIndex = index + direction;
+
+        if (
+          index === -1 ||
+          targetIndex < 0 ||
+          targetIndex >= previous.combatants.length
+        ) {
+          return previous;
+        }
+
+        const combatants = [...previous.combatants];
+        [combatants[index], combatants[targetIndex]] = [
+          combatants[targetIndex],
+          combatants[index],
+        ];
+
+        return { ...previous, combatants };
+      });
+    },
+    [updateMarchingOrder],
+  );
+
+  const toggleCombatantCondition = useCallback(
+    (combatantId: string, conditionId: string) => {
+      updateMarchingOrder((previous) => ({
+        ...previous,
+        combatants: previous.combatants.map((combatant) => {
+          if (combatant.id !== combatantId) {
+            return combatant;
+          }
+
+          const hasCondition = combatant.conditionIds.includes(conditionId);
+
+          return {
+            ...combatant,
+            conditionIds: hasCondition
+              ? combatant.conditionIds.filter((id) => id !== conditionId)
+              : [...combatant.conditionIds, conditionId],
+          };
+        }),
+      }));
+    },
+    [updateMarchingOrder],
+  );
+
+  const setActiveCombatant = useCallback(
+    (combatantId: string | null) => {
+      updateMarchingOrder((previous) => ({
+        ...previous,
+        activeCombatantId: combatantId,
+      }));
+    },
+    [updateMarchingOrder],
+  );
+
+  const advanceTurn = useCallback(
+    (direction: 1 | -1) => {
+      updateMarchingOrder((previous) => {
+        if (previous.combatants.length === 0) {
+          return previous;
+        }
+
+        const activeIndex = previous.combatants.findIndex(
+          (combatant) => combatant.id === previous.activeCombatantId,
+        );
+        const nextIndex =
+          activeIndex === -1
+            ? 0
+            : (activeIndex + direction + previous.combatants.length) %
+              previous.combatants.length;
+
+        return {
+          ...previous,
+          activeCombatantId: previous.combatants[nextIndex].id,
+        };
+      });
+    },
+    [updateMarchingOrder],
+  );
+
+  const addCondition = useCallback(() => {
+    const newCondition: ConditionType = {
+      id: createId("condition"),
+      label: "New Condition",
+      color:
+        CONDITION_SWATCHES[
+          Math.floor(Math.random() * CONDITION_SWATCHES.length)
+        ],
+    };
+
+    updateMarchingOrder((previous) => ({
+      ...previous,
+      conditions: [...previous.conditions, newCondition],
+    }));
+
+    return newCondition.id;
+  }, [updateMarchingOrder]);
+
+  const updateCondition = useCallback(
+    (conditionId: string, patch: Partial<Omit<ConditionType, "id">>) => {
+      updateMarchingOrder((previous) => ({
+        ...previous,
+        conditions: previous.conditions.map((condition) =>
+          condition.id === conditionId
+            ? { ...condition, ...patch }
+            : condition,
+        ),
+      }));
+    },
+    [updateMarchingOrder],
+  );
+
+  const deleteCondition = useCallback(
+    (conditionId: string) => {
+      updateMarchingOrder((previous) => ({
+        ...previous,
+        conditions: previous.conditions.filter(
+          (condition) => condition.id !== conditionId,
+        ),
+        combatants: previous.combatants.map((combatant) => ({
+          ...combatant,
+          conditionIds: combatant.conditionIds.filter(
+            (id) => id !== conditionId,
+          ),
+        })),
+      }));
+    },
+    [updateMarchingOrder],
+  );
+
+  const toggleMarchingOrder = useCallback(
+    (displayId: DisplayTarget) => {
+      publishState((previous) => ({
+        ...previous,
+        displays: {
+          ...previous.displays,
+          [displayId]: {
+            ...previous.displays[displayId],
+            showMarchingOrder: !previous.displays[displayId]?.showMarchingOrder,
+          },
+        },
+      }));
+    },
+    [publishState],
+  );
+
   const resetToDefaults = useCallback(() => {
     publishState(createDefaultState());
   }, [publishState]);
@@ -360,6 +689,18 @@ export function useTerradorState() {
     addLayer,
     updateLayer,
     deleteLayer,
+    setMarchingOrderTitle,
+    addCombatant,
+    updateCombatant,
+    deleteCombatant,
+    moveCombatant,
+    toggleCombatantCondition,
+    setActiveCombatant,
+    advanceTurn,
+    addCondition,
+    updateCondition,
+    deleteCondition,
+    toggleMarchingOrder,
     resetToDefaults,
   };
 }

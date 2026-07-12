@@ -2,6 +2,7 @@
 
 import { DISPLAY_DEFINITIONS } from "@/data/defaultScenes";
 import type { DisplayTarget, FloatingLayer } from "@/types/terrador";
+import { MarchingOrderOverlay } from "./MarchingOrderOverlay";
 import { useTerradorState } from "./useTerradorState";
 import { VisualAsset } from "./VisualAsset";
 
@@ -80,6 +81,12 @@ export function TerradorDisplay({ displayId }: TerradorDisplayProps) {
           displayState?.blackout ? "opacity-100" : "opacity-0"
         }`}
       />
+
+      {displayState?.showMarchingOrder ? (
+        <div className="pointer-events-none absolute inset-0 z-40">
+          <MarchingOrderOverlay marchingOrder={state.marchingOrder} />
+        </div>
+      ) : null}
     </main>
   );
 }

@@ -8,6 +8,7 @@ import type {
   LayerPosition,
   Scene,
 } from "@/types/terrador";
+import { MarchingOrderEditor } from "./MarchingOrderEditor";
 import { STORAGE_KEY, useTerradorState } from "./useTerradorState";
 import { VisualAsset } from "./VisualAsset";
 
@@ -46,10 +47,12 @@ interface DisplayPreviewCardProps {
   selected: boolean;
   scene?: Scene;
   blackout: boolean;
+  showMarchingOrder: boolean;
   onSelect: () => void;
   onPrevious: () => void;
   onNext: () => void;
   onToggleBlackout: () => void;
+  onToggleMarchingOrder: () => void;
 }
 
 function DisplayPreviewCard({
@@ -57,10 +60,12 @@ function DisplayPreviewCard({
   selected,
   scene,
   blackout,
+  showMarchingOrder,
   onSelect,
   onPrevious,
   onNext,
   onToggleBlackout,
+  onToggleMarchingOrder,
 }: DisplayPreviewCardProps) {
   const definition = DISPLAY_DEFINITIONS.find((display) => display.id === displayId);
 
@@ -122,6 +127,12 @@ function DisplayPreviewCard({
           <button className="steel-button quiet-button" onClick={onNext}>
             Next
           </button>
+          <button
+            className={`steel-button col-span-2 ${showMarchingOrder ? "" : "quiet-button"}`}
+            onClick={onToggleMarchingOrder}
+          >
+            {showMarchingOrder ? "Hide Marching Order" : "Show Marching Order"}
+          </button>
         </div>
       </div>
     </section>
@@ -145,7 +156,7 @@ function HotkeyTable({ scenes, onActivate }: HotkeyTableProps) {
             <h2 className="text-2xl font-black">Hotkey Table</h2>
           </div>
           <div className="rounded-2xl border border-cyan-200/15 bg-slate-950/60 px-4 py-2 text-sm text-cyan-100">
-            B blackouts target, N/P cycle, F opens help
+            B blackouts target, N/P cycle, M marching order, , / . turn, F help
           </div>
         </div>
 
@@ -523,6 +534,18 @@ export function DmControlCenter() {
     addLayer,
     updateLayer,
     deleteLayer,
+    setMarchingOrderTitle,
+    addCombatant,
+    updateCombatant,
+    deleteCombatant,
+    moveCombatant,
+    toggleCombatantCondition,
+    setActiveCombatant,
+    advanceTurn,
+    addCondition,
+    updateCondition,
+    deleteCondition,
+    toggleMarchingOrder,
     resetToDefaults,
   } = useTerradorState();
   const [selectedDisplay, setSelectedDisplay] =
@@ -579,6 +602,21 @@ export function DmControlCenter() {
         event.preventDefault();
         setShowFullscreenHelp((current) => !current);
       }
+
+      if (key === "M") {
+        event.preventDefault();
+        toggleMarchingOrder(selectedDisplay);
+      }
+
+      if (event.key === ",") {
+        event.preventDefault();
+        advanceTurn(-1);
+      }
+
+      if (event.key === ".") {
+        event.preventDefault();
+        advanceTurn(1);
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -587,9 +625,11 @@ export function DmControlCenter() {
   }, [
     activateRelativeScene,
     activateScene,
+    advanceTurn,
     selectedDisplay,
     state.scenes,
     toggleBlackout,
+    toggleMarchingOrder,
   ]);
 
   const handleAddScene = () => {
@@ -648,10 +688,14 @@ export function DmControlCenter() {
               selected={selectedDisplay === display.id}
               scene={activeScenesByDisplay[display.id]}
               blackout={state.displays[display.id]?.blackout ?? false}
+              showMarchingOrder={
+                state.displays[display.id]?.showMarchingOrder ?? false
+              }
               onSelect={() => setSelectedDisplay(display.id)}
               onPrevious={() => activateRelativeScene(display.id, -1)}
               onNext={() => activateRelativeScene(display.id, 1)}
               onToggleBlackout={() => toggleBlackout(display.id)}
+              onToggleMarchingOrder={() => toggleMarchingOrder(display.id)}
             />
           ))}
         </section>
@@ -707,6 +751,23 @@ export function DmControlCenter() {
           onActivate={handleActivateScene}
           onUpdateScene={updateScene}
           onDeleteScene={handleDeleteScene}
+        />
+
+        <MarchingOrderEditor
+          marchingOrder={state.marchingOrder}
+          displays={state.displays}
+          onSetTitle={setMarchingOrderTitle}
+          onAddCombatant={addCombatant}
+          onUpdateCombatant={updateCombatant}
+          onDeleteCombatant={deleteCombatant}
+          onMoveCombatant={moveCombatant}
+          onToggleCombatantCondition={toggleCombatantCondition}
+          onSetActiveCombatant={setActiveCombatant}
+          onAdvanceTurn={advanceTurn}
+          onAddCondition={addCondition}
+          onUpdateCondition={updateCondition}
+          onDeleteCondition={deleteCondition}
+          onToggleDisplay={toggleMarchingOrder}
         />
 
         <LayerEditor

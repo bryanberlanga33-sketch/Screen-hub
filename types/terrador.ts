@@ -36,12 +36,41 @@ export interface FloatingLayer {
 export interface DisplayState {
   activeSceneId: string | null;
   blackout: boolean;
+  showMarchingOrder: boolean;
 }
 
 export type DisplaysState = Record<DisplayTarget, DisplayState>;
+
+export type CombatantKind = "player" | "ally" | "enemy";
+
+export interface ConditionType {
+  id: string;
+  label: string;
+  /** Any valid CSS color, stored as a hex string from the color picker. */
+  color: string;
+}
+
+export interface Combatant {
+  id: string;
+  name: string;
+  /** Data URL (from an uploaded picture) or a /public path. Empty renders a placeholder. */
+  image: string;
+  kind: CombatantKind;
+  /** Ids of the ConditionTypes currently affecting this combatant. */
+  conditionIds: string[];
+}
+
+export interface MarchingOrderState {
+  title: string;
+  combatants: Combatant[];
+  conditions: ConditionType[];
+  /** The combatant whose turn is highlighted, or null. */
+  activeCombatantId: string | null;
+}
 
 export interface TerradorState {
   scenes: Scene[];
   layers: FloatingLayer[];
   displays: DisplaysState;
+  marchingOrder: MarchingOrderState;
 }
