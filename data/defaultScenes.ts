@@ -4,9 +4,25 @@ import type {
   DisplayDefinition,
   DisplaysState,
   FloatingLayer,
+  MarchingOrderPosition,
   MarchingOrderState,
   Scene,
 } from "@/types/terrador";
+
+export const MARCHING_ORDER_POSITIONS: {
+  value: MarchingOrderPosition;
+  label: string;
+}[] = [
+  { value: "top-left", label: "Top Left" },
+  { value: "top-center", label: "Top Center" },
+  { value: "top-right", label: "Top Right" },
+  { value: "center-left", label: "Center Left" },
+  { value: "center", label: "Center" },
+  { value: "center-right", label: "Center Right" },
+  { value: "bottom-left", label: "Bottom Left" },
+  { value: "bottom-center", label: "Bottom Center" },
+  { value: "bottom-right", label: "Bottom Right" },
+];
 
 export const DISPLAY_DEFINITIONS: DisplayDefinition[] = [
   {
@@ -183,4 +199,5 @@ export const DEFAULT_MARCHING_ORDER: MarchingOrderState = {
   combatants: DEFAULT_COMBATANTS,
   conditions: DEFAULT_CONDITIONS,
   activeCombatantId: "aria-vane",
+  position: "center-left",
 };

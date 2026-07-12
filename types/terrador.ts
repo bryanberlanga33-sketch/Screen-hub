@@ -60,12 +60,25 @@ export interface Combatant {
   conditionIds: string[];
 }
 
+export type MarchingOrderPosition =
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "center-left"
+  | "center"
+  | "center-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
+
 export interface MarchingOrderState {
   title: string;
   combatants: Combatant[];
   conditions: ConditionType[];
   /** The combatant whose turn is highlighted, or null. */
   activeCombatantId: string | null;
+  /** Which section of the screen the overlay is anchored to. */
+  position: MarchingOrderPosition;
 }
 
 export interface TerradorState {

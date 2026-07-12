@@ -109,10 +109,8 @@ textarea {
 
 /* --- Marching / combat order overlay (Clair Obscur: Expedition 33 style) --- */
 .marching-order-strip {
+  --marching-edge: clamp(0.75rem, 2.2vw, 2.5rem);
   position: absolute;
-  left: clamp(0.75rem, 2.2vw, 2.5rem);
-  top: 50%;
-  transform: translateY(-50%);
   width: clamp(15rem, 22vw, 20rem);
   max-height: 92vh;
   overflow-y: auto;
@@ -129,6 +127,57 @@ textarea {
 
 .marching-order-strip::-webkit-scrollbar {
   display: none;
+}
+
+/* Screen-section anchors for the overlay. */
+.marching-pos-top-left {
+  top: var(--marching-edge);
+  left: var(--marching-edge);
+}
+
+.marching-pos-top-center {
+  top: var(--marching-edge);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.marching-pos-top-right {
+  top: var(--marching-edge);
+  right: var(--marching-edge);
+}
+
+.marching-pos-center-left {
+  top: 50%;
+  left: var(--marching-edge);
+  transform: translateY(-50%);
+}
+
+.marching-pos-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.marching-pos-center-right {
+  top: 50%;
+  right: var(--marching-edge);
+  transform: translateY(-50%);
+}
+
+.marching-pos-bottom-left {
+  bottom: var(--marching-edge);
+  left: var(--marching-edge);
+}
+
+.marching-pos-bottom-center {
+  bottom: var(--marching-edge);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.marching-pos-bottom-right {
+  bottom: var(--marching-edge);
+  right: var(--marching-edge);
 }
 
 .marching-order-title {

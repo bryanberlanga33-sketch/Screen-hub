@@ -1,13 +1,17 @@
 "use client";
 
 import { type ChangeEvent, useRef, useState } from "react";
-import { DISPLAY_DEFINITIONS } from "@/data/defaultScenes";
+import {
+  DISPLAY_DEFINITIONS,
+  MARCHING_ORDER_POSITIONS,
+} from "@/data/defaultScenes";
 import type {
   Combatant,
   CombatantKind,
   ConditionType,
   DisplaysState,
   DisplayTarget,
+  MarchingOrderPosition,
   MarchingOrderState,
 } from "@/types/terrador";
 import { fileToResizedDataUrl } from "./imageUpload";
@@ -23,6 +27,7 @@ interface MarchingOrderEditorProps {
   marchingOrder: MarchingOrderState;
   displays: DisplaysState;
   onSetTitle: (title: string) => void;
+  onSetPosition: (position: MarchingOrderPosition) => void;
   onAddCombatant: (kind: CombatantKind) => void;
   onUpdateCombatant: (
     combatantId: string,
@@ -242,6 +247,7 @@ export function MarchingOrderEditor({
   marchingOrder,
   displays,
   onSetTitle,
+  onSetPosition,
   onAddCombatant,
   onUpdateCombatant,
   onDeleteCombatant,
@@ -254,7 +260,8 @@ export function MarchingOrderEditor({
   onDeleteCondition,
   onToggleDisplay,
 }: MarchingOrderEditorProps) {
-  const { combatants, conditions, activeCombatantId, title } = marchingOrder;
+  const { combatants, conditions, activeCombatantId, title, position } =
+    marchingOrder;
   const activeCombatant = combatants.find(
     (combatant) => combatant.id === activeCombatantId,
   );
@@ -319,6 +326,38 @@ export function MarchingOrderEditor({
             >
               Next Turn
             </button>
+          </div>
+        </div>
+
+        <div className="grid gap-3 rounded-2xl border border-cyan-100/14 bg-slate-950/50 p-4 sm:grid-cols-[auto_1fr] sm:items-center">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-cyan-300/70">
+              Overlay Position
+            </p>
+            <p className="text-sm text-slate-300">
+              Pick the screen section for the overlay.
+            </p>
+          </div>
+          <div
+            className="grid w-full max-w-xs gap-1.5 sm:justify-self-end"
+            style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+            role="group"
+            aria-label="Marching order overlay position"
+          >
+            {MARCHING_ORDER_POSITIONS.map((option) => {
+              const active = position === option.value;
+              return (
+                <button
+                  key={option.value}
+                  className={`steel-button px-2 py-3 text-[0.65rem] leading-tight ${active ? "" : "quiet-button"}`}
+                  aria-pressed={active}
+                  title={option.label}
+                  onClick={() => onSetPosition(option.value)}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 

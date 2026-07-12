@@ -6,6 +6,7 @@ import {
   DEFAULT_LAYERS,
   DEFAULT_MARCHING_ORDER,
   DEFAULT_SCENES,
+  MARCHING_ORDER_POSITIONS,
 } from "@/data/defaultScenes";
 import type {
   Combatant,
@@ -15,6 +16,7 @@ import type {
   DisplayState,
   DisplayTarget,
   FloatingLayer,
+  MarchingOrderPosition,
   MarchingOrderState,
   Scene,
   TerradorState,
@@ -139,11 +141,18 @@ function normalizeMarchingOrder(
       ? saved.activeCombatantId
       : (combatants[0]?.id ?? null);
 
+  const position = MARCHING_ORDER_POSITIONS.some(
+    (option) => option.value === saved.position,
+  )
+    ? (saved.position as MarchingOrderPosition)
+    : DEFAULT_MARCHING_ORDER.position;
+
   return {
     title: typeof saved.title === "string" ? saved.title : DEFAULT_MARCHING_ORDER.title,
     combatants,
     conditions,
     activeCombatantId,
+    position,
   };
 }
 
@@ -460,6 +469,13 @@ export function useTerradorState() {
     [updateMarchingOrder],
   );
 
+  const setMarchingOrderPosition = useCallback(
+    (position: MarchingOrderPosition) => {
+      updateMarchingOrder((previous) => ({ ...previous, position }));
+    },
+    [updateMarchingOrder],
+  );
+
   const addCombatant = useCallback(
     (kind: CombatantKind) => {
       const newCombatant: Combatant = {
@@ -690,6 +706,7 @@ export function useTerradorState() {
     updateLayer,
     deleteLayer,
     setMarchingOrderTitle,
+    setMarchingOrderPosition,
     addCombatant,
     updateCombatant,
     deleteCombatant,

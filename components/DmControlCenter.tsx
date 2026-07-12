@@ -535,6 +535,7 @@ export function DmControlCenter() {
     updateLayer,
     deleteLayer,
     setMarchingOrderTitle,
+    setMarchingOrderPosition,
     addCombatant,
     updateCombatant,
     deleteCombatant,
@@ -757,6 +758,7 @@ export function DmControlCenter() {
           marchingOrder={state.marchingOrder}
           displays={state.displays}
           onSetTitle={setMarchingOrderTitle}
+          onSetPosition={setMarchingOrderPosition}
           onAddCombatant={addCombatant}
           onUpdateCombatant={updateCombatant}
           onDeleteCombatant={deleteCombatant}

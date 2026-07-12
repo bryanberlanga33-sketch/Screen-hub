@@ -54,7 +54,8 @@ function ConditionChips({ conditions }: { conditions: ConditionType[] }) {
 export function MarchingOrderOverlay({
   marchingOrder,
 }: MarchingOrderOverlayProps) {
-  const { combatants, conditions, activeCombatantId, title } = marchingOrder;
+  const { combatants, conditions, activeCombatantId, title, position } =
+    marchingOrder;
 
   if (combatants.length === 0) {
     return null;
@@ -70,7 +71,7 @@ export function MarchingOrderOverlay({
       .filter((condition): condition is ConditionType => Boolean(condition));
 
   return (
-    <aside className="marching-order-strip">
+    <aside className={`marching-order-strip marching-pos-${position}`}>
       <p className="marching-order-title">{title || "Marching Order"}</p>
       <ol className="marching-order-list">
         {combatants.map((combatant, index) => {
