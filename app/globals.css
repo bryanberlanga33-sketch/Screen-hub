@@ -337,3 +337,32 @@ textarea {
   border: none;
   border-radius: 0.55rem;
 }
+
+.asset-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  border: 1px dashed rgba(125, 211, 252, 0.4);
+  border-radius: 1rem;
+  background: rgba(2, 6, 23, 0.6);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.asset-dropzone:hover,
+.asset-dropzone:focus-visible {
+  border-color: rgba(103, 232, 249, 0.75);
+  background: rgba(8, 47, 73, 0.5);
+  outline: none;
+}
+
+.asset-dropzone.is-active {
+  border-color: rgba(103, 232, 249, 0.9);
+  border-style: solid;
+  background: rgba(8, 145, 178, 0.25);
+}
