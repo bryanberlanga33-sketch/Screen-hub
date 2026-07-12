@@ -31,9 +31,11 @@ export function AssetLibrary() {
   const totalBytes = assets.reduce((sum, asset) => sum + asset.size, 0);
 
   const handleFiles = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
+    // Copy File references out before clearing the input: `event.target.files`
+    // is a live FileList that resetting `value` would empty.
+    const files = Array.from(event.target.files ?? []);
     event.target.value = "";
-    if (files && files.length > 0) {
+    if (files.length > 0) {
       await upload(files);
     }
   };

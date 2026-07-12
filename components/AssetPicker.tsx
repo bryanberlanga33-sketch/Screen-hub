@@ -20,9 +20,11 @@ export function AssetPicker({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
+    // Copy File references out before clearing the input: `event.target.files`
+    // is a live FileList that resetting `value` would empty.
+    const files = Array.from(event.target.files ?? []);
     event.target.value = "";
-    if (!files || files.length === 0) {
+    if (files.length === 0) {
       return;
     }
     const ids = await upload(files);
