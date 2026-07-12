@@ -31,6 +31,10 @@ function displayLabel(displayId: DisplayTarget) {
 }
 
 function fileName(imagePath: string) {
+  if (imagePath.startsWith("data:image")) {
+    return "Uploaded image";
+  }
+
   return imagePath.split("/").filter(Boolean).pop() ?? imagePath;
 }
 
@@ -417,7 +421,7 @@ function SceneEditor({
                       className="aspect-video rounded-xl border border-cyan-100/15"
                       compact
                     />
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-xl font-black text-slate-50">
                           {scene.name}
@@ -432,7 +436,7 @@ function SceneEditor({
                       <p className="mt-2 text-sm text-slate-300">
                         {scene.description || "No description yet."}
                       </p>
-                      <p className="mt-2 text-xs text-cyan-200/70">
+                      <p className="mt-2 break-all text-xs text-cyan-200/70">
                         {scene.imagePath}
                       </p>
                     </div>

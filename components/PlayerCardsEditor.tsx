@@ -194,6 +194,7 @@ export function PlayerCardsEditor({
   onToggleDisplay,
 }: PlayerCardsEditorProps) {
   const { title, cards, position } = playerCards;
+  const visibleCardCount = cards.filter((card) => card.visible).length;
 
   return (
     <section className="rune-panel rounded-3xl p-5">
@@ -208,15 +209,20 @@ export function PlayerCardsEditor({
               Build a tray of tall card images and show them on any visual screen.
             </p>
           </div>
-          <label className="grid gap-1 text-sm text-cyan-100">
-            Tray title
-            <input
-              className="steel-input"
-              value={title}
-              maxLength={40}
-              onChange={(event) => onSetTitle(event.target.value)}
-            />
-          </label>
+          <div className="grid gap-2 sm:grid-cols-[minmax(12rem,18rem)_auto] sm:items-end">
+            <label className="grid gap-1 text-sm text-cyan-100">
+              Tray title
+              <input
+                className="steel-input"
+                value={title}
+                maxLength={40}
+                onChange={(event) => onSetTitle(event.target.value)}
+              />
+            </label>
+            <button className="steel-button" onClick={onAddCard}>
+              Add Player Card
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-4 rounded-2xl border border-cyan-100/14 bg-slate-950/50 p-4 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -237,9 +243,9 @@ export function PlayerCardsEditor({
               );
             })}
           </div>
-          <button className="steel-button" onClick={onAddCard}>
-            Add Player Card
-          </button>
+          <span className="rounded-2xl border border-cyan-200/20 bg-slate-950/70 px-3 py-2 text-xs text-cyan-100">
+            {visibleCardCount} visible card{visibleCardCount === 1 ? "" : "s"}
+          </span>
         </div>
 
         <div className="grid gap-3 rounded-2xl border border-cyan-100/14 bg-slate-950/50 p-4 sm:grid-cols-[auto_1fr] sm:items-center">
