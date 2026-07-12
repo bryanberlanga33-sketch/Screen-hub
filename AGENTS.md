@@ -19,3 +19,9 @@ TypeScript, and Tailwind CSS 4. See `README.md` for full usage.
 - Scene/overlay images go in `public/scenes/` and `public/overlays/`. These
   folders may be empty; missing images render a styled placeholder, so an empty
   `public/` does not block running or testing the app.
+- Gotcha: after editing `app/globals.css`, the long-running `next dev`
+  (Turbopack) server can keep serving a stale CSS chunk, so new/renamed CSS
+  classes silently don't apply in the browser (JS/TSX changes still hot-reload
+  fine). If CSS edits don't show up, restart the dev server (a clean `rm -rf
+  .next` before restart is the reliable fix). `npm run build` always reflects
+  the current CSS, so use it to confirm a CSS issue is environment-only.

@@ -1,9 +1,28 @@
 import type {
+  Combatant,
+  ConditionType,
   DisplayDefinition,
   DisplaysState,
   FloatingLayer,
+  MarchingOrderPosition,
+  MarchingOrderState,
   Scene,
 } from "@/types/terrador";
+
+export const MARCHING_ORDER_POSITIONS: {
+  value: MarchingOrderPosition;
+  label: string;
+}[] = [
+  { value: "top-left", label: "Top Left" },
+  { value: "top-center", label: "Top Center" },
+  { value: "top-right", label: "Top Right" },
+  { value: "center-left", label: "Center Left" },
+  { value: "center", label: "Center" },
+  { value: "center-right", label: "Center Right" },
+  { value: "bottom-left", label: "Bottom Left" },
+  { value: "bottom-center", label: "Bottom Center" },
+  { value: "bottom-right", label: "Bottom Right" },
+];
 
 export const DISPLAY_DEFINITIONS: DisplayDefinition[] = [
   {
@@ -119,13 +138,66 @@ export const DEFAULT_DISPLAYS: DisplaysState = {
   "player-art": {
     activeSceneId: "bio-bloom-village",
     blackout: false,
+    showMarchingOrder: false,
   },
   "battle-map": {
     activeSceneId: "mountain-pass",
     blackout: false,
+    showMarchingOrder: false,
   },
   secondary: {
     activeSceneId: "glad-stone",
     blackout: false,
+    showMarchingOrder: false,
   },
+};
+
+export const DEFAULT_CONDITIONS: ConditionType[] = [
+  { id: "poisoned", label: "Poisoned", color: "#22c55e" },
+  { id: "stunned", label: "Stunned", color: "#eab308" },
+  { id: "frightened", label: "Frightened", color: "#a855f7" },
+  { id: "charmed", label: "Charmed", color: "#ec4899" },
+  { id: "prone", label: "Prone", color: "#f97316" },
+  { id: "blessed", label: "Blessed", color: "#38bdf8" },
+  { id: "burning", label: "Burning", color: "#ef4444" },
+  { id: "hasted", label: "Hasted", color: "#14b8a6" },
+];
+
+export const DEFAULT_COMBATANTS: Combatant[] = [
+  {
+    id: "aria-vane",
+    name: "Aria Vane",
+    image: "",
+    kind: "player",
+    conditionIds: ["blessed"],
+  },
+  {
+    id: "bront-hollow",
+    name: "Bront Hollow",
+    image: "",
+    kind: "player",
+    conditionIds: [],
+  },
+  {
+    id: "sable-ally",
+    name: "Sable",
+    image: "",
+    kind: "ally",
+    conditionIds: ["hasted"],
+  },
+  {
+    id: "gloomfang",
+    name: "Gloomfang",
+    image: "",
+    kind: "enemy",
+    conditionIds: ["burning", "frightened"],
+  },
+];
+
+export const DEFAULT_MARCHING_ORDER: MarchingOrderState = {
+  title: "Marching Order",
+  combatants: DEFAULT_COMBATANTS,
+  conditions: DEFAULT_CONDITIONS,
+  activeCombatantId: "aria-vane",
+  position: "center-left",
 };
