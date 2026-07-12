@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  type ChangeEvent,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { DISPLAY_DEFINITIONS } from "@/data/defaultScenes";
 import type {
   DisplayTarget,
@@ -8,7 +14,10 @@ import type {
   LayerPosition,
   Scene,
 } from "@/types/terrador";
+import { ImageCropper } from "./ImageCropper";
 import { MarchingOrderEditor } from "./MarchingOrderEditor";
+import { PlayerCardsEditor } from "./PlayerCardsEditor";
+import { readFileAsDataUrl } from "./imageUpload";
 import { STORAGE_KEY, useTerradorState } from "./useTerradorState";
 import { VisualAsset } from "./VisualAsset";
 
@@ -20,6 +29,26 @@ const layerPositions: LayerPosition[] = [
   "center",
 ];
 
+const mainSections = [
+  "screens",
+  "launch",
+  "hotkeys",
+  "scenes",
+  "marching",
+  "player-cards",
+  "layers",
+] as const;
+
+type MainSectionId = (typeof mainSections)[number];
+type SectionOpenState = Record<MainSectionId, boolean>;
+
+function createOpenSections(open: boolean): SectionOpenState {
+  return mainSections.reduce((state, sectionId) => {
+    state[sectionId] = open;
+    return state;
+  }, {} as SectionOpenState);
+}
+
 function displayLabel(displayId: DisplayTarget) {
   return (
     DISPLAY_DEFINITIONS.find((display) => display.id === displayId)?.label ??
@@ -28,6 +57,10 @@ function displayLabel(displayId: DisplayTarget) {
 }
 
 function fileName(imagePath: string) {
+  if (imagePath.startsWith("data:image")) {
+    return "Uploaded image";
+  }
+
   return imagePath.split("/").filter(Boolean).pop() ?? imagePath;
 }
 
@@ -42,17 +75,69 @@ function isTypingField(target: EventTarget | null) {
   );
 }
 
+interface CollapsibleSectionProps {
+  eyebrow: string;
+  title: string;
+  description: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}
+
+function CollapsibleSection({
+  eyebrow,
+  title,
+  description,
+  open,
+  onToggle,
+  children,
+}: CollapsibleSectionProps) {
+  return (
+    <section className="rune-panel collapsible-shell rounded-3xl">
+      <div className="relative z-10">
+        <button
+          className="collapsible-trigger"
+          type="button"
+          aria-expanded={open}
+          onClick={onToggle}
+        >
+          <span className="min-w-0 text-left">
+            <span className="block text-xs uppercase tracking-[0.28em] text-cyan-300/75">
+              {eyebrow}
+            </span>
+            <span className="mt-1 block text-2xl font-black text-slate-50">
+              {title}
+            </span>
+            <span className="mt-1 block text-sm font-normal tracking-normal text-slate-300">
+              {description}
+            </span>
+          </span>
+          <span className="collapsible-status">
+            {open ? "Collapse" : "Expand"}
+            <span className={`collapsible-chevron ${open ? "is-open" : ""}`}>
+              ▾
+            </span>
+          </span>
+        </button>
+        {open ? <div className="collapsible-body">{children}</div> : null}
+      </div>
+    </section>
+  );
+}
+
 interface DisplayPreviewCardProps {
   displayId: DisplayTarget;
   selected: boolean;
   scene?: Scene;
   blackout: boolean;
   showMarchingOrder: boolean;
+  showPlayerCards: boolean;
   onSelect: () => void;
   onPrevious: () => void;
   onNext: () => void;
   onToggleBlackout: () => void;
   onToggleMarchingOrder: () => void;
+  onTogglePlayerCards: () => void;
 }
 
 function DisplayPreviewCard({
@@ -61,11 +146,13 @@ function DisplayPreviewCard({
   scene,
   blackout,
   showMarchingOrder,
+  showPlayerCards,
   onSelect,
   onPrevious,
   onNext,
   onToggleBlackout,
   onToggleMarchingOrder,
+  onTogglePlayerCards,
 }: DisplayPreviewCardProps) {
   const definition = DISPLAY_DEFINITIONS.find((display) => display.id === displayId);
 
@@ -128,10 +215,16 @@ function DisplayPreviewCard({
             Next
           </button>
           <button
-            className={`steel-button col-span-2 ${showMarchingOrder ? "" : "quiet-button"}`}
+            className={`steel-button ${showMarchingOrder ? "" : "quiet-button"}`}
             onClick={onToggleMarchingOrder}
           >
             {showMarchingOrder ? "Hide Marching Order" : "Show Marching Order"}
+          </button>
+          <button
+            className={`steel-button ${showPlayerCards ? "" : "quiet-button"}`}
+            onClick={onTogglePlayerCards}
+          >
+            {showPlayerCards ? "Hide Player Cards" : "Show Player Cards"}
           </button>
         </div>
       </div>
@@ -156,7 +249,7 @@ function HotkeyTable({ scenes, onActivate }: HotkeyTableProps) {
             <h2 className="text-2xl font-black">Hotkey Table</h2>
           </div>
           <div className="rounded-2xl border border-cyan-200/15 bg-slate-950/60 px-4 py-2 text-sm text-cyan-100">
-            B blackouts target, N/P cycle, M marching order, , / . turn, F help
+            B blackouts target, N/P cycle, M marching order, C cards, , / . turn, F help
           </div>
         </div>
 
@@ -219,6 +312,38 @@ function SceneEditor({
   onUpdateScene,
   onDeleteScene,
 }: SceneEditorProps) {
+  const [cropRequest, setCropRequest] = useState<{
+    sceneId: string;
+    sceneName: string;
+    source: string;
+  } | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleSceneFileChange = async (
+    event: ChangeEvent<HTMLInputElement>,
+    scene: Scene,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    setUploadError(null);
+
+    try {
+      const source = await readFileAsDataUrl(file);
+      setCropRequest({
+        sceneId: scene.id,
+        sceneName: scene.name,
+        source,
+      });
+    } catch {
+      setUploadError("Could not read that screen image.");
+    }
+  };
+
   return (
     <section className="rune-panel rounded-3xl p-5">
       <div className="relative z-10">
@@ -245,6 +370,36 @@ function SceneEditor({
               >
                 {isEditing ? (
                   <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="grid gap-4 rounded-2xl border border-cyan-100/14 bg-slate-950/50 p-3 md:grid-cols-[minmax(0,1fr)_17rem] lg:col-span-2">
+                      <VisualAsset
+                        name={scene.name}
+                        imagePath={scene.imagePath}
+                        className="aspect-video rounded-xl border border-cyan-100/15"
+                        compact
+                      />
+                      <div className="grid content-center gap-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.2em] text-cyan-300/70">
+                            Screen Crop
+                          </p>
+                          <p className="mt-1 text-sm text-slate-300">
+                            Upload a photo and crop it to the 16:9 screen frame
+                            saved at 1280 x 720.
+                          </p>
+                        </div>
+                        <label className="steel-button cursor-pointer text-center">
+                          Upload &amp; Crop Screen Photo
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(event) =>
+                              handleSceneFileChange(event, scene)
+                            }
+                          />
+                        </label>
+                      </div>
+                    </div>
                     <label className="grid gap-1 text-sm text-cyan-100">
                       Scene name
                       <input
@@ -308,6 +463,11 @@ function SceneEditor({
                         }
                       />
                     </label>
+                    {uploadError ? (
+                      <p className="text-xs text-red-300 lg:col-span-2">
+                        {uploadError}
+                      </p>
+                    ) : null}
                     <div className="flex flex-wrap gap-2 lg:col-span-2">
                       <button
                         className="steel-button"
@@ -337,7 +497,7 @@ function SceneEditor({
                       className="aspect-video rounded-xl border border-cyan-100/15"
                       compact
                     />
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-xl font-black text-slate-50">
                           {scene.name}
@@ -352,7 +512,7 @@ function SceneEditor({
                       <p className="mt-2 text-sm text-slate-300">
                         {scene.description || "No description yet."}
                       </p>
-                      <p className="mt-2 text-xs text-cyan-200/70">
+                      <p className="mt-2 break-all text-xs text-cyan-200/70">
                         {scene.imagePath}
                       </p>
                     </div>
@@ -382,6 +542,21 @@ function SceneEditor({
             );
           })}
         </div>
+        {cropRequest ? (
+          <ImageCropper
+            title={`Crop ${cropRequest.sceneName} for screen`}
+            source={cropRequest.source}
+            outputWidth={1280}
+            outputHeight={720}
+            aspectLabel="16:9 screen"
+            applyLabel="Use Cropped Screen Photo"
+            onApply={(dataUrl) => {
+              onUpdateScene(cropRequest.sceneId, { imagePath: dataUrl });
+              setCropRequest(null);
+            }}
+            onCancel={() => setCropRequest(null)}
+          />
+        ) : null}
       </div>
     </section>
   );
@@ -546,13 +721,23 @@ export function DmControlCenter() {
     addCondition,
     updateCondition,
     deleteCondition,
+    setPlayerCardsTitle,
+    setPlayerCardsPosition,
+    addPlayerCard,
+    updatePlayerCard,
+    deletePlayerCard,
+    movePlayerCard,
     toggleMarchingOrder,
+    togglePlayerCards,
     resetToDefaults,
   } = useTerradorState();
   const [selectedDisplay, setSelectedDisplay] =
     useState<DisplayTarget>("player-art");
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
   const [showFullscreenHelp, setShowFullscreenHelp] = useState(false);
+  const [openSections, setOpenSections] = useState<SectionOpenState>(() =>
+    createOpenSections(true),
+  );
 
   const activeScenesByDisplay = useMemo(() => {
     return DISPLAY_DEFINITIONS.reduce(
@@ -609,6 +794,11 @@ export function DmControlCenter() {
         toggleMarchingOrder(selectedDisplay);
       }
 
+      if (key === "C") {
+        event.preventDefault();
+        togglePlayerCards(selectedDisplay);
+      }
+
       if (event.key === ",") {
         event.preventDefault();
         advanceTurn(-1);
@@ -631,6 +821,7 @@ export function DmControlCenter() {
     state.scenes,
     toggleBlackout,
     toggleMarchingOrder,
+    togglePlayerCards,
   ]);
 
   const handleAddScene = () => {
@@ -648,6 +839,13 @@ export function DmControlCenter() {
   const handleActivateScene = (scene: Scene) => {
     setSelectedDisplay(scene.targetDisplay);
     activateScene(scene.id);
+  };
+
+  const toggleMainSection = (sectionId: MainSectionId) => {
+    setOpenSections((current) => ({
+      ...current,
+      [sectionId]: !current[sectionId],
+    }));
   };
 
   return (
@@ -681,104 +879,201 @@ export function DmControlCenter() {
       </header>
 
       <div className="mx-auto mt-6 grid max-w-7xl gap-6">
-        <section className="grid gap-4 lg:grid-cols-3">
-          {DISPLAY_DEFINITIONS.map((display) => (
-            <DisplayPreviewCard
-              key={display.id}
-              displayId={display.id}
-              selected={selectedDisplay === display.id}
-              scene={activeScenesByDisplay[display.id]}
-              blackout={state.displays[display.id]?.blackout ?? false}
-              showMarchingOrder={
-                state.displays[display.id]?.showMarchingOrder ?? false
-              }
-              onSelect={() => setSelectedDisplay(display.id)}
-              onPrevious={() => activateRelativeScene(display.id, -1)}
-              onNext={() => activateRelativeScene(display.id, 1)}
-              onToggleBlackout={() => toggleBlackout(display.id)}
-              onToggleMarchingOrder={() => toggleMarchingOrder(display.id)}
-            />
-          ))}
-        </section>
-
-        <section className="rune-panel rounded-3xl p-5">
-          <div className="relative z-10 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-cyan-300/75">
-                Display Launch Bay
-              </p>
-              <h2 className="text-2xl font-black">Open Visual Windows</h2>
-              <p className="mt-2 text-sm text-slate-300">
-                Open each display in a new browser window, drag it to a TV or
-                monitor, then make that browser window full screen.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {DISPLAY_DEFINITIONS.map((display) => (
-                <a
-                  key={display.id}
-                  className="steel-button"
-                  href={display.route}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open {display.label}
-                </a>
-              ))}
-              <button
-                className="steel-button quiet-button"
-                onClick={() => setShowFullscreenHelp(true)}
-              >
-                Fullscreen Help (F)
-              </button>
-              <button
-                className="steel-button danger-button"
-                onClick={resetToDefaults}
-              >
-                Reset Saved Data
-              </button>
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-cyan-100/14 bg-slate-950/50 p-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.28em] text-cyan-300/75">
+              Page Sections
+            </p>
+            <p className="mt-1 text-sm text-slate-300">
+              Collapse panels you are not using to shorten the command center.
+            </p>
           </div>
-        </section>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="steel-button quiet-button py-2 text-xs"
+              onClick={() => setOpenSections(createOpenSections(true))}
+            >
+              Expand All
+            </button>
+            <button
+              className="steel-button quiet-button py-2 text-xs"
+              onClick={() => setOpenSections(createOpenSections(false))}
+            >
+              Collapse All
+            </button>
+          </div>
+        </div>
 
-        <HotkeyTable scenes={state.scenes} onActivate={handleActivateScene} />
+        <CollapsibleSection
+          eyebrow="Live Screens"
+          title="Display Controls"
+          description="Pick the target screen, cycle scenes, and toggle blackout or overlays."
+          open={openSections.screens}
+          onToggle={() => toggleMainSection("screens")}
+        >
+          <section className="grid gap-4 lg:grid-cols-3">
+            {DISPLAY_DEFINITIONS.map((display) => (
+              <DisplayPreviewCard
+                key={display.id}
+                displayId={display.id}
+                selected={selectedDisplay === display.id}
+                scene={activeScenesByDisplay[display.id]}
+                blackout={state.displays[display.id]?.blackout ?? false}
+                showMarchingOrder={
+                  state.displays[display.id]?.showMarchingOrder ?? false
+                }
+                showPlayerCards={
+                  state.displays[display.id]?.showPlayerCards ?? false
+                }
+                onSelect={() => setSelectedDisplay(display.id)}
+                onPrevious={() => activateRelativeScene(display.id, -1)}
+                onNext={() => activateRelativeScene(display.id, 1)}
+                onToggleBlackout={() => toggleBlackout(display.id)}
+                onToggleMarchingOrder={() => toggleMarchingOrder(display.id)}
+                onTogglePlayerCards={() => togglePlayerCards(display.id)}
+              />
+            ))}
+          </section>
+        </CollapsibleSection>
 
-        <SceneEditor
-          scenes={state.scenes}
-          selectedDisplay={selectedDisplay}
-          editingSceneId={editingSceneId}
-          onAddScene={handleAddScene}
-          onSetEditingSceneId={setEditingSceneId}
-          onActivate={handleActivateScene}
-          onUpdateScene={updateScene}
-          onDeleteScene={handleDeleteScene}
-        />
+        <CollapsibleSection
+          eyebrow="Display Launch Bay"
+          title="Open Visual Windows"
+          description="Launch the player art, battle map, or secondary display routes."
+          open={openSections.launch}
+          onToggle={() => toggleMainSection("launch")}
+        >
+          <section className="rune-panel rounded-3xl p-5">
+            <div className="relative z-10 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <p className="text-xs uppercase tracking-[0.28em] text-cyan-300/75">
+                  Display Launch Bay
+                </p>
+                <h2 className="text-2xl font-black">Open Visual Windows</h2>
+                <p className="mt-2 text-sm text-slate-300">
+                  Open each display in a new browser window, drag it to a TV or
+                  monitor, then make that browser window full screen.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {DISPLAY_DEFINITIONS.map((display) => (
+                  <a
+                    key={display.id}
+                    className="steel-button"
+                    href={display.route}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open {display.label}
+                  </a>
+                ))}
+                <button
+                  className="steel-button quiet-button"
+                  onClick={() => setShowFullscreenHelp(true)}
+                >
+                  Fullscreen Help (F)
+                </button>
+                <button
+                  className="steel-button danger-button"
+                  onClick={resetToDefaults}
+                >
+                  Reset Saved Data
+                </button>
+              </div>
+            </div>
+          </section>
+        </CollapsibleSection>
 
-        <MarchingOrderEditor
-          marchingOrder={state.marchingOrder}
-          displays={state.displays}
-          onSetTitle={setMarchingOrderTitle}
-          onSetPosition={setMarchingOrderPosition}
-          onAddCombatant={addCombatant}
-          onUpdateCombatant={updateCombatant}
-          onDeleteCombatant={deleteCombatant}
-          onMoveCombatant={moveCombatant}
-          onToggleCombatantCondition={toggleCombatantCondition}
-          onSetActiveCombatant={setActiveCombatant}
-          onAdvanceTurn={advanceTurn}
-          onAddCondition={addCondition}
-          onUpdateCondition={updateCondition}
-          onDeleteCondition={deleteCondition}
-          onToggleDisplay={toggleMarchingOrder}
-        />
+        <CollapsibleSection
+          eyebrow="Keyboard Runes"
+          title="Hotkey Table"
+          description="Activate scenes quickly and review keyboard commands."
+          open={openSections.hotkeys}
+          onToggle={() => toggleMainSection("hotkeys")}
+        >
+          <HotkeyTable scenes={state.scenes} onActivate={handleActivateScene} />
+        </CollapsibleSection>
 
-        <LayerEditor
-          layers={state.layers}
-          selectedDisplay={selectedDisplay}
-          onAddLayer={() => addLayer(selectedDisplay)}
-          onUpdateLayer={updateLayer}
-          onDeleteLayer={deleteLayer}
-        />
+        <CollapsibleSection
+          eyebrow="Scene Forge"
+          title="Scene Editor"
+          description="Add, crop, edit, activate, and delete screen scenes."
+          open={openSections.scenes}
+          onToggle={() => toggleMainSection("scenes")}
+        >
+          <SceneEditor
+            scenes={state.scenes}
+            selectedDisplay={selectedDisplay}
+            editingSceneId={editingSceneId}
+            onAddScene={handleAddScene}
+            onSetEditingSceneId={setEditingSceneId}
+            onActivate={handleActivateScene}
+            onUpdateScene={updateScene}
+            onDeleteScene={handleDeleteScene}
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          eyebrow="Combat Runes"
+          title="Marching & Combat Order"
+          description="Manage combatants, turns, conditions, and the marching order overlay."
+          open={openSections.marching}
+          onToggle={() => toggleMainSection("marching")}
+        >
+          <MarchingOrderEditor
+            marchingOrder={state.marchingOrder}
+            displays={state.displays}
+            onSetTitle={setMarchingOrderTitle}
+            onSetPosition={setMarchingOrderPosition}
+            onAddCombatant={addCombatant}
+            onUpdateCombatant={updateCombatant}
+            onDeleteCombatant={deleteCombatant}
+            onMoveCombatant={moveCombatant}
+            onToggleCombatantCondition={toggleCombatantCondition}
+            onSetActiveCombatant={setActiveCombatant}
+            onAdvanceTurn={advanceTurn}
+            onAddCondition={addCondition}
+            onUpdateCondition={updateCondition}
+            onDeleteCondition={deleteCondition}
+            onToggleDisplay={toggleMarchingOrder}
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          eyebrow="Player Card Showcase"
+          title="Vertical Player Cards"
+          description="Build, crop, and show tall player cards on display screens."
+          open={openSections["player-cards"]}
+          onToggle={() => toggleMainSection("player-cards")}
+        >
+          <PlayerCardsEditor
+            playerCards={state.playerCards}
+            displays={state.displays}
+            onSetTitle={setPlayerCardsTitle}
+            onSetPosition={setPlayerCardsPosition}
+            onAddCard={addPlayerCard}
+            onUpdateCard={updatePlayerCard}
+            onDeleteCard={deletePlayerCard}
+            onMoveCard={movePlayerCard}
+            onToggleDisplay={togglePlayerCards}
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          eyebrow="Floating Sigils"
+          title="Floating Layer Editor"
+          description="Manage floating overlay images and their display placement."
+          open={openSections.layers}
+          onToggle={() => toggleMainSection("layers")}
+        >
+          <LayerEditor
+            layers={state.layers}
+            selectedDisplay={selectedDisplay}
+            onAddLayer={() => addLayer(selectedDisplay)}
+            onUpdateLayer={updateLayer}
+            onDeleteLayer={deleteLayer}
+          />
+        </CollapsibleSection>
       </div>
 
       {showFullscreenHelp ? (

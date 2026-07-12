@@ -5,6 +5,7 @@ import {
   DEFAULT_DISPLAYS,
   DEFAULT_LAYERS,
   DEFAULT_MARCHING_ORDER,
+  DEFAULT_PLAYER_CARDS_STATE,
   DEFAULT_SCENES,
   MARCHING_ORDER_POSITIONS,
 } from "@/data/defaultScenes";
@@ -18,6 +19,8 @@ import type {
   FloatingLayer,
   MarchingOrderPosition,
   MarchingOrderState,
+  PlayerCard,
+  PlayerCardsState,
   Scene,
   TerradorState,
 } from "@/types/terrador";
@@ -50,6 +53,7 @@ function createDefaultState(): TerradorState {
     layers: DEFAULT_LAYERS,
     displays: DEFAULT_DISPLAYS,
     marchingOrder: DEFAULT_MARCHING_ORDER,
+    playerCards: DEFAULT_PLAYER_CARDS_STATE,
   };
 }
 
@@ -77,6 +81,7 @@ function normalizeDisplayState(
         : fallback.activeSceneId,
     blackout: Boolean(saved?.blackout),
     showMarchingOrder: Boolean(saved?.showMarchingOrder),
+    showPlayerCards: Boolean(saved?.showPlayerCards),
   };
 }
 
@@ -156,6 +161,40 @@ function normalizeMarchingOrder(
   };
 }
 
+function normalizePlayerCards(
+  saved: Partial<PlayerCardsState> | undefined,
+): PlayerCardsState {
+  if (!saved || typeof saved !== "object") {
+    return DEFAULT_PLAYER_CARDS_STATE;
+  }
+
+  const cards: PlayerCard[] = Array.isArray(saved.cards)
+    ? saved.cards
+        .filter((card): card is PlayerCard => Boolean(card?.id))
+        .map((card) => ({
+          id: String(card.id),
+          name: String(card.name ?? "Player Card"),
+          image: typeof card.image === "string" ? card.image : "",
+          visible: card.visible !== false,
+        }))
+    : DEFAULT_PLAYER_CARDS_STATE.cards;
+
+  const position = MARCHING_ORDER_POSITIONS.some(
+    (option) => option.value === saved.position,
+  )
+    ? (saved.position as MarchingOrderPosition)
+    : DEFAULT_PLAYER_CARDS_STATE.position;
+
+  return {
+    title:
+      typeof saved.title === "string"
+        ? saved.title
+        : DEFAULT_PLAYER_CARDS_STATE.title,
+    cards,
+    position,
+  };
+}
+
 function normalizeState(state: TerradorState): TerradorState {
   const defaultState = createDefaultState();
 
@@ -164,6 +203,7 @@ function normalizeState(state: TerradorState): TerradorState {
     layers: Array.isArray(state.layers) ? state.layers : defaultState.layers,
     displays: normalizeDisplays(state.displays),
     marchingOrder: normalizeMarchingOrder(state.marchingOrder),
+    playerCards: normalizePlayerCards(state.playerCards),
   };
 }
 
@@ -262,6 +302,7 @@ export function useTerradorState() {
           displays: {
             ...previous.displays,
             [scene.targetDisplay]: {
+              ...previous.displays[scene.targetDisplay],
               activeSceneId: scene.id,
               blackout: false,
             },
@@ -299,6 +340,7 @@ export function useTerradorState() {
           displays: {
             ...previous.displays,
             [displayId]: {
+              ...previous.displays[displayId],
               activeSceneId: nextScene.id,
               blackout: false,
             },
@@ -362,6 +404,7 @@ export function useTerradorState() {
           displays: {
             ...previous.displays,
             [deletedScene.targetDisplay]: {
+              ...previous.displays[deletedScene.targetDisplay],
               activeSceneId:
                 previous.displays[deletedScene.targetDisplay]?.activeSceneId ===
                 sceneId
@@ -457,6 +500,16 @@ export function useTerradorState() {
       publishState((previous) => ({
         ...previous,
         marchingOrder: updater(previous.marchingOrder),
+      }));
+    },
+    [publishState],
+  );
+
+  const updatePlayerCards = useCallback(
+    (updater: (previous: PlayerCardsState) => PlayerCardsState) => {
+      publishState((previous) => ({
+        ...previous,
+        playerCards: updater(previous.playerCards),
       }));
     },
     [publishState],
@@ -672,6 +725,81 @@ export function useTerradorState() {
     [updateMarchingOrder],
   );
 
+  const setPlayerCardsTitle = useCallback(
+    (title: string) => {
+      updatePlayerCards((previous) => ({ ...previous, title }));
+    },
+    [updatePlayerCards],
+  );
+
+  const setPlayerCardsPosition = useCallback(
+    (position: MarchingOrderPosition) => {
+      updatePlayerCards((previous) => ({ ...previous, position }));
+    },
+    [updatePlayerCards],
+  );
+
+  const addPlayerCard = useCallback(() => {
+    const newCard: PlayerCard = {
+      id: createId("player-card"),
+      name: "New Player Card",
+      image: "",
+      visible: true,
+    };
+
+    updatePlayerCards((previous) => ({
+      ...previous,
+      cards: [...previous.cards, newCard],
+    }));
+
+    return newCard.id;
+  }, [updatePlayerCards]);
+
+  const updatePlayerCard = useCallback(
+    (cardId: string, patch: Partial<Omit<PlayerCard, "id">>) => {
+      updatePlayerCards((previous) => ({
+        ...previous,
+        cards: previous.cards.map((card) =>
+          card.id === cardId ? { ...card, ...patch } : card,
+        ),
+      }));
+    },
+    [updatePlayerCards],
+  );
+
+  const deletePlayerCard = useCallback(
+    (cardId: string) => {
+      updatePlayerCards((previous) => ({
+        ...previous,
+        cards: previous.cards.filter((card) => card.id !== cardId),
+      }));
+    },
+    [updatePlayerCards],
+  );
+
+  const movePlayerCard = useCallback(
+    (cardId: string, direction: 1 | -1) => {
+      updatePlayerCards((previous) => {
+        const index = previous.cards.findIndex((card) => card.id === cardId);
+        const targetIndex = index + direction;
+
+        if (
+          index === -1 ||
+          targetIndex < 0 ||
+          targetIndex >= previous.cards.length
+        ) {
+          return previous;
+        }
+
+        const cards = [...previous.cards];
+        [cards[index], cards[targetIndex]] = [cards[targetIndex], cards[index]];
+
+        return { ...previous, cards };
+      });
+    },
+    [updatePlayerCards],
+  );
+
   const toggleMarchingOrder = useCallback(
     (displayId: DisplayTarget) => {
       publishState((previous) => ({
@@ -681,6 +809,22 @@ export function useTerradorState() {
           [displayId]: {
             ...previous.displays[displayId],
             showMarchingOrder: !previous.displays[displayId]?.showMarchingOrder,
+          },
+        },
+      }));
+    },
+    [publishState],
+  );
+
+  const togglePlayerCards = useCallback(
+    (displayId: DisplayTarget) => {
+      publishState((previous) => ({
+        ...previous,
+        displays: {
+          ...previous.displays,
+          [displayId]: {
+            ...previous.displays[displayId],
+            showPlayerCards: !previous.displays[displayId]?.showPlayerCards,
           },
         },
       }));
@@ -717,7 +861,14 @@ export function useTerradorState() {
     addCondition,
     updateCondition,
     deleteCondition,
+    setPlayerCardsTitle,
+    setPlayerCardsPosition,
+    addPlayerCard,
+    updatePlayerCard,
+    deletePlayerCard,
+    movePlayerCard,
     toggleMarchingOrder,
+    togglePlayerCards,
     resetToDefaults,
   };
 }
