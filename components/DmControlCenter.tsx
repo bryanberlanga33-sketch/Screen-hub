@@ -64,6 +64,20 @@ function fileName(imagePath: string) {
   return imagePath.split("/").filter(Boolean).pop() ?? imagePath;
 }
 
+function isUploadedImage(imagePath: string) {
+  return imagePath.startsWith("data:image");
+}
+
+function imageSourceLabel(imagePath: string) {
+  if (!imagePath) {
+    return "No image assigned";
+  }
+
+  return isUploadedImage(imagePath)
+    ? "Uploaded cropped photo"
+    : `Public path: ${imagePath}`;
+}
+
 function isTypingField(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -388,7 +402,7 @@ function SceneEditor({
                           </p>
                         </div>
                         <label className="steel-button cursor-pointer text-center">
-                          Upload &amp; Crop Screen Photo
+                          Upload / Replace &amp; Crop Screen Photo
                           <input
                             type="file"
                             accept="image/*"
@@ -411,14 +425,24 @@ function SceneEditor({
                       />
                     </label>
                     <label className="grid gap-1 text-sm text-cyan-100">
-                      Image path
+                      Public image path
                       <input
                         className="steel-input"
-                        value={scene.imagePath}
+                        placeholder={
+                          isUploadedImage(scene.imagePath)
+                            ? "Uploaded cropped photo is saved"
+                            : "/scenes/example.jpg"
+                        }
+                        value={
+                          isUploadedImage(scene.imagePath) ? "" : scene.imagePath
+                        }
                         onChange={(event) =>
                           onUpdateScene(scene.id, { imagePath: event.target.value })
                         }
                       />
+                      <span className="text-xs text-cyan-200/70">
+                        {imageSourceLabel(scene.imagePath)}
+                      </span>
                     </label>
                     <label className="grid gap-1 text-sm text-cyan-100">
                       Target screen
@@ -481,6 +505,14 @@ function SceneEditor({
                       >
                         Activate
                       </button>
+                      {isUploadedImage(scene.imagePath) ? (
+                        <button
+                          className="steel-button quiet-button"
+                          onClick={() => onUpdateScene(scene.id, { imagePath: "" })}
+                        >
+                          Clear Uploaded Photo
+                        </button>
+                      ) : null}
                       <button
                         className="steel-button danger-button"
                         onClick={() => onDeleteScene(scene.id)}
@@ -512,8 +544,10 @@ function SceneEditor({
                       <p className="mt-2 text-sm text-slate-300">
                         {scene.description || "No description yet."}
                       </p>
-                      <p className="mt-2 break-all text-xs text-cyan-200/70">
-                        {scene.imagePath}
+                      <p className="mt-2 inline-flex max-w-full rounded-full border border-cyan-200/20 bg-cyan-950/30 px-3 py-1 text-xs text-cyan-100">
+                        <span className="truncate">
+                          {imageSourceLabel(scene.imagePath)}
+                        </span>
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2 md:justify-end">
@@ -527,7 +561,7 @@ function SceneEditor({
                         className="steel-button quiet-button"
                         onClick={() => onSetEditingSceneId(scene.id)}
                       >
-                        Edit
+                        Edit Scene / Photo
                       </button>
                       <button
                         className="steel-button danger-button"
