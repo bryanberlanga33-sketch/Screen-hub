@@ -34,11 +34,6 @@ export function ImageCropper({
 
   useEffect(() => {
     let cancelled = false;
-    setImage(null);
-    setError(null);
-    setZoom(1);
-    setOffsetX(0);
-    setOffsetY(0);
 
     loadImage(source)
       .then((loadedImage) => {
