@@ -3,6 +3,7 @@
 import { DISPLAY_DEFINITIONS } from "@/data/defaultScenes";
 import type { DisplayTarget, FloatingLayer } from "@/types/terrador";
 import { MarchingOrderOverlay } from "./MarchingOrderOverlay";
+import { PlayerCardsOverlay } from "./PlayerCardsOverlay";
 import { useTerradorState } from "./useTerradorState";
 import { VisualAsset } from "./VisualAsset";
 
@@ -85,6 +86,12 @@ export function TerradorDisplay({ displayId }: TerradorDisplayProps) {
       {displayState?.showMarchingOrder ? (
         <div className="pointer-events-none absolute inset-0 z-40">
           <MarchingOrderOverlay marchingOrder={state.marchingOrder} />
+        </div>
+      ) : null}
+
+      {displayState?.showPlayerCards ? (
+        <div className="pointer-events-none absolute inset-0 z-50">
+          <PlayerCardsOverlay playerCards={state.playerCards} />
         </div>
       ) : null}
     </main>

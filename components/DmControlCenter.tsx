@@ -10,6 +10,7 @@ import type {
 } from "@/types/terrador";
 import { ImageCropper } from "./ImageCropper";
 import { MarchingOrderEditor } from "./MarchingOrderEditor";
+import { PlayerCardsEditor } from "./PlayerCardsEditor";
 import { readFileAsDataUrl } from "./imageUpload";
 import { STORAGE_KEY, useTerradorState } from "./useTerradorState";
 import { VisualAsset } from "./VisualAsset";
@@ -50,11 +51,13 @@ interface DisplayPreviewCardProps {
   scene?: Scene;
   blackout: boolean;
   showMarchingOrder: boolean;
+  showPlayerCards: boolean;
   onSelect: () => void;
   onPrevious: () => void;
   onNext: () => void;
   onToggleBlackout: () => void;
   onToggleMarchingOrder: () => void;
+  onTogglePlayerCards: () => void;
 }
 
 function DisplayPreviewCard({
@@ -63,11 +66,13 @@ function DisplayPreviewCard({
   scene,
   blackout,
   showMarchingOrder,
+  showPlayerCards,
   onSelect,
   onPrevious,
   onNext,
   onToggleBlackout,
   onToggleMarchingOrder,
+  onTogglePlayerCards,
 }: DisplayPreviewCardProps) {
   const definition = DISPLAY_DEFINITIONS.find((display) => display.id === displayId);
 
@@ -130,10 +135,16 @@ function DisplayPreviewCard({
             Next
           </button>
           <button
-            className={`steel-button col-span-2 ${showMarchingOrder ? "" : "quiet-button"}`}
+            className={`steel-button ${showMarchingOrder ? "" : "quiet-button"}`}
             onClick={onToggleMarchingOrder}
           >
             {showMarchingOrder ? "Hide Marching Order" : "Show Marching Order"}
+          </button>
+          <button
+            className={`steel-button ${showPlayerCards ? "" : "quiet-button"}`}
+            onClick={onTogglePlayerCards}
+          >
+            {showPlayerCards ? "Hide Player Cards" : "Show Player Cards"}
           </button>
         </div>
       </div>
@@ -158,7 +169,7 @@ function HotkeyTable({ scenes, onActivate }: HotkeyTableProps) {
             <h2 className="text-2xl font-black">Hotkey Table</h2>
           </div>
           <div className="rounded-2xl border border-cyan-200/15 bg-slate-950/60 px-4 py-2 text-sm text-cyan-100">
-            B blackouts target, N/P cycle, M marching order, , / . turn, F help
+            B blackouts target, N/P cycle, M marching order, C cards, , / . turn, F help
           </div>
         </div>
 
@@ -630,7 +641,14 @@ export function DmControlCenter() {
     addCondition,
     updateCondition,
     deleteCondition,
+    setPlayerCardsTitle,
+    setPlayerCardsPosition,
+    addPlayerCard,
+    updatePlayerCard,
+    deletePlayerCard,
+    movePlayerCard,
     toggleMarchingOrder,
+    togglePlayerCards,
     resetToDefaults,
   } = useTerradorState();
   const [selectedDisplay, setSelectedDisplay] =
@@ -693,6 +711,11 @@ export function DmControlCenter() {
         toggleMarchingOrder(selectedDisplay);
       }
 
+      if (key === "C") {
+        event.preventDefault();
+        togglePlayerCards(selectedDisplay);
+      }
+
       if (event.key === ",") {
         event.preventDefault();
         advanceTurn(-1);
@@ -715,6 +738,7 @@ export function DmControlCenter() {
     state.scenes,
     toggleBlackout,
     toggleMarchingOrder,
+    togglePlayerCards,
   ]);
 
   const handleAddScene = () => {
@@ -776,11 +800,13 @@ export function DmControlCenter() {
               showMarchingOrder={
                 state.displays[display.id]?.showMarchingOrder ?? false
               }
+              showPlayerCards={state.displays[display.id]?.showPlayerCards ?? false}
               onSelect={() => setSelectedDisplay(display.id)}
               onPrevious={() => activateRelativeScene(display.id, -1)}
               onNext={() => activateRelativeScene(display.id, 1)}
               onToggleBlackout={() => toggleBlackout(display.id)}
               onToggleMarchingOrder={() => toggleMarchingOrder(display.id)}
+              onTogglePlayerCards={() => togglePlayerCards(display.id)}
             />
           ))}
         </section>
@@ -854,6 +880,18 @@ export function DmControlCenter() {
           onUpdateCondition={updateCondition}
           onDeleteCondition={deleteCondition}
           onToggleDisplay={toggleMarchingOrder}
+        />
+
+        <PlayerCardsEditor
+          playerCards={state.playerCards}
+          displays={state.displays}
+          onSetTitle={setPlayerCardsTitle}
+          onSetPosition={setPlayerCardsPosition}
+          onAddCard={addPlayerCard}
+          onUpdateCard={updatePlayerCard}
+          onDeleteCard={deletePlayerCard}
+          onMoveCard={movePlayerCard}
+          onToggleDisplay={togglePlayerCards}
         />
 
         <LayerEditor

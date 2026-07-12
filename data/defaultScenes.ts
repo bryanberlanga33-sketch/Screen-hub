@@ -6,6 +6,8 @@ import type {
   FloatingLayer,
   MarchingOrderPosition,
   MarchingOrderState,
+  PlayerCard,
+  PlayerCardsState,
   Scene,
 } from "@/types/terrador";
 
@@ -139,16 +141,19 @@ export const DEFAULT_DISPLAYS: DisplaysState = {
     activeSceneId: "bio-bloom-village",
     blackout: false,
     showMarchingOrder: false,
+    showPlayerCards: false,
   },
   "battle-map": {
     activeSceneId: "mountain-pass",
     blackout: false,
     showMarchingOrder: false,
+    showPlayerCards: false,
   },
   secondary: {
     activeSceneId: "glad-stone",
     blackout: false,
     showMarchingOrder: false,
+    showPlayerCards: false,
   },
 };
 
@@ -200,4 +205,12 @@ export const DEFAULT_MARCHING_ORDER: MarchingOrderState = {
   conditions: DEFAULT_CONDITIONS,
   activeCombatantId: "aria-vane",
   position: "center-left",
+};
+
+export const DEFAULT_PLAYER_CARDS: PlayerCard[] = [];
+
+export const DEFAULT_PLAYER_CARDS_STATE: PlayerCardsState = {
+  title: "Player Cards",
+  cards: DEFAULT_PLAYER_CARDS,
+  position: "bottom-center",
 };

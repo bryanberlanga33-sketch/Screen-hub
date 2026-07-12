@@ -337,3 +337,116 @@ textarea {
   border: none;
   border-radius: 0.55rem;
 }
+
+/* --- Vertical player card display tray --- */
+.player-card-tray {
+  --player-card-edge: clamp(0.75rem, 2.2vw, 2.5rem);
+  position: absolute;
+  width: min(92vw, 58rem);
+  max-height: 92vh;
+  overflow: hidden;
+  padding: 1rem;
+  border-radius: 1.35rem;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  background: linear-gradient(160deg, rgba(8, 18, 31, 0.88), rgba(6, 10, 18, 0.84));
+  box-shadow:
+    0 0 0 1px rgba(6, 10, 18, 0.7) inset,
+    0 18px 54px rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(3px);
+}
+
+.player-card-pos-top-left {
+  top: var(--player-card-edge);
+  left: var(--player-card-edge);
+}
+
+.player-card-pos-top-center {
+  top: var(--player-card-edge);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.player-card-pos-top-right {
+  top: var(--player-card-edge);
+  right: var(--player-card-edge);
+}
+
+.player-card-pos-center-left {
+  top: 50%;
+  left: var(--player-card-edge);
+  transform: translateY(-50%);
+}
+
+.player-card-pos-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.player-card-pos-center-right {
+  top: 50%;
+  right: var(--player-card-edge);
+  transform: translateY(-50%);
+}
+
+.player-card-pos-bottom-left {
+  bottom: var(--player-card-edge);
+  left: var(--player-card-edge);
+}
+
+.player-card-pos-bottom-center {
+  bottom: var(--player-card-edge);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.player-card-pos-bottom-right {
+  right: var(--player-card-edge);
+  bottom: var(--player-card-edge);
+}
+
+.player-card-tray-title {
+  margin: 0 0 0.8rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(125, 211, 252, 0.24);
+  color: #bae6fd;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.player-card-list {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: clamp(8rem, 14vw, 12rem);
+  gap: clamp(0.7rem, 1.2vw, 1rem);
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(125, 211, 252, 0.5) rgba(15, 23, 42, 0.8);
+}
+
+.player-card-item {
+  min-width: 0;
+  padding: 0.35rem;
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(160deg, rgba(125, 211, 252, 0.16), transparent 40%),
+    rgba(15, 23, 42, 0.72);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.14);
+}
+
+.player-card-name {
+  margin: 0.45rem 0 0;
+  overflow: hidden;
+  color: #eff6ff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

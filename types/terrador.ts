@@ -37,6 +37,7 @@ export interface DisplayState {
   activeSceneId: string | null;
   blackout: boolean;
   showMarchingOrder: boolean;
+  showPlayerCards: boolean;
 }
 
 export type DisplaysState = Record<DisplayTarget, DisplayState>;
@@ -81,9 +82,25 @@ export interface MarchingOrderState {
   position: MarchingOrderPosition;
 }
 
+export interface PlayerCard {
+  id: string;
+  name: string;
+  /** Data URL (from an uploaded card) or a /public path. Empty renders a placeholder. */
+  image: string;
+  visible: boolean;
+}
+
+export interface PlayerCardsState {
+  title: string;
+  cards: PlayerCard[];
+  /** Which section of the screen the card tray is anchored to. */
+  position: MarchingOrderPosition;
+}
+
 export interface TerradorState {
   scenes: Scene[];
   layers: FloatingLayer[];
   displays: DisplaysState;
   marchingOrder: MarchingOrderState;
+  playerCards: PlayerCardsState;
 }
