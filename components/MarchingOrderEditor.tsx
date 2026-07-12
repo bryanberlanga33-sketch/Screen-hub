@@ -14,7 +14,8 @@ import type {
   MarchingOrderPosition,
   MarchingOrderState,
 } from "@/types/terrador";
-import { fileToResizedDataUrl } from "./imageUpload";
+import { addAsset, assetRef } from "./assetLibrary";
+import { AssetPicker } from "./AssetPicker";
 import { VisualAsset } from "./VisualAsset";
 
 const KIND_OPTIONS: { value: CombatantKind; label: string }[] = [
@@ -78,6 +79,7 @@ function CombatantRow({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
 
   const handleFileChange = async (
     event: ChangeEvent<HTMLInputElement>,
@@ -91,10 +93,10 @@ function CombatantRow({
     setUploadError(null);
     setUploading(true);
     try {
-      const dataUrl = await fileToResizedDataUrl(file);
-      onUpdate({ image: dataUrl });
+      const meta = await addAsset(file);
+      onUpdate({ image: assetRef(meta.id) });
     } catch {
-      setUploadError("Could not read that image.");
+      setUploadError("Could not save that image.");
     } finally {
       setUploading(false);
     }
@@ -131,6 +133,12 @@ function CombatantRow({
             disabled={uploading}
           >
             {uploading ? "Loading..." : "Upload"}
+          </button>
+          <button
+            className="steel-button quiet-button py-2 text-xs"
+            onClick={() => setShowPicker(true)}
+          >
+            Library
           </button>
           {combatant.image ? (
             <button
@@ -239,6 +247,17 @@ function CombatantRow({
           </div>
         </div>
       </div>
+
+      {showPicker ? (
+        <AssetPicker
+          title={`Choose a portrait for ${combatant.name}`}
+          onPick={(ref) => {
+            onUpdate({ image: ref });
+            setShowPicker(false);
+          }}
+          onClose={() => setShowPicker(false)}
+        />
+      ) : null}
     </article>
   );
 }

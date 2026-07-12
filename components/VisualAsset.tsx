@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getAssetObjectUrl, isAssetRef, assetIdFromRef, subscribeAssets } from "./assetLibrary";
 
 interface VisualAssetProps {
   name: string;
@@ -19,8 +20,52 @@ export function VisualAsset({
   placeholderClassName = "",
   compact = false,
 }: VisualAssetProps) {
-  const [failedPath, setFailedPath] = useState<string | null>(null);
-  const shouldShowPlaceholder = !imagePath || failedPath === imagePath;
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const [resolvedAsset, setResolvedAsset] = useState<{
+    ref: string;
+    url: string | null;
+  }>({ ref: "", url: null });
+
+  const isRef = isAssetRef(imagePath);
+
+  // Asset-library images live in IndexedDB and are referenced as
+  // `library:<id>`. Resolve those to a per-window object URL; plain paths and
+  // data URLs are used directly during render.
+  useEffect(() => {
+    if (!isRef) {
+      return;
+    }
+
+    let active = true;
+    const resolve = () => {
+      getAssetObjectUrl(assetIdFromRef(imagePath))
+        .then((url) => {
+          if (active) {
+            setResolvedAsset({ ref: imagePath, url });
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setResolvedAsset({ ref: imagePath, url: null });
+          }
+        });
+    };
+
+    resolve();
+    const unsubscribe = subscribeAssets(resolve);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [imagePath, isRef]);
+
+  const resolvedSrc = isRef
+    ? resolvedAsset.ref === imagePath
+      ? resolvedAsset.url
+      : null
+    : imagePath || null;
+
+  const shouldShowPlaceholder = !resolvedSrc || failedSrc === resolvedSrc;
 
   return (
     <div className={`relative overflow-hidden bg-slate-950 ${className}`}>
@@ -41,18 +86,19 @@ export function VisualAsset({
               compact ? "hidden" : "text-sm"
             }`}
           >
-            Add this file at {imagePath || "a scene path"} to replace the
-            placeholder.
+            {isAssetRef(imagePath)
+              ? "Pick an image from the Asset Library to replace the placeholder."
+              : `Add this file at ${imagePath || "a scene path"} to replace the placeholder.`}
           </p>
         </div>
       ) : (
-        // Plain img tags are easiest for local user-supplied files in /public.
+        // Plain img tags are easiest for local user-supplied files and blob URLs.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           alt={name}
           className={`absolute inset-0 h-full w-full ${imageClassName}`}
-          src={imagePath}
-          onError={() => setFailedPath(imagePath)}
+          src={resolvedSrc}
+          onError={() => setFailedSrc(resolvedSrc)}
         />
       )}
     </div>

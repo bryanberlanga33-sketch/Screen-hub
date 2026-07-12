@@ -8,6 +8,8 @@ import type {
   LayerPosition,
   Scene,
 } from "@/types/terrador";
+import { AssetLibrary } from "./AssetLibrary";
+import { AssetPicker } from "./AssetPicker";
 import { MarchingOrderEditor } from "./MarchingOrderEditor";
 import { STORAGE_KEY, useTerradorState } from "./useTerradorState";
 import { VisualAsset } from "./VisualAsset";
@@ -219,6 +221,8 @@ function SceneEditor({
   onUpdateScene,
   onDeleteScene,
 }: SceneEditorProps) {
+  const [pickerSceneId, setPickerSceneId] = useState<string | null>(null);
+
   return (
     <section className="rune-panel rounded-3xl p-5">
       <div className="relative z-10">
@@ -255,16 +259,27 @@ function SceneEditor({
                         }
                       />
                     </label>
-                    <label className="grid gap-1 text-sm text-cyan-100">
-                      Image path
-                      <input
-                        className="steel-input"
-                        value={scene.imagePath}
-                        onChange={(event) =>
-                          onUpdateScene(scene.id, { imagePath: event.target.value })
-                        }
-                      />
-                    </label>
+                    <div className="grid gap-1 text-sm text-cyan-100">
+                      <span>Image path or library asset</span>
+                      <div className="flex gap-2">
+                        <input
+                          className="steel-input"
+                          value={scene.imagePath}
+                          onChange={(event) =>
+                            onUpdateScene(scene.id, {
+                              imagePath: event.target.value,
+                            })
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="steel-button quiet-button whitespace-nowrap px-3 text-xs"
+                          onClick={() => setPickerSceneId(scene.id)}
+                        >
+                          Library
+                        </button>
+                      </div>
+                    </div>
                     <label className="grid gap-1 text-sm text-cyan-100">
                       Target screen
                       <select
@@ -383,6 +398,17 @@ function SceneEditor({
           })}
         </div>
       </div>
+
+      {pickerSceneId ? (
+        <AssetPicker
+          title="Choose a scene image"
+          onPick={(ref) => {
+            onUpdateScene(pickerSceneId, { imagePath: ref });
+            setPickerSceneId(null);
+          }}
+          onClose={() => setPickerSceneId(null)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -405,6 +431,8 @@ function LayerEditor({
   onUpdateLayer,
   onDeleteLayer,
 }: LayerEditorProps) {
+  const [pickerLayerId, setPickerLayerId] = useState<string | null>(null);
+
   return (
     <section className="rune-panel rounded-3xl p-5">
       <div className="relative z-10">
@@ -436,16 +464,25 @@ function LayerEditor({
                   }
                 />
               </label>
-              <label className="grid gap-1 text-sm text-cyan-100">
-                Image path
-                <input
-                  className="steel-input"
-                  value={layer.imagePath}
-                  onChange={(event) =>
-                    onUpdateLayer(layer.id, { imagePath: event.target.value })
-                  }
-                />
-              </label>
+              <div className="grid gap-1 text-sm text-cyan-100">
+                <span>Image path or library asset</span>
+                <div className="flex gap-2">
+                  <input
+                    className="steel-input"
+                    value={layer.imagePath}
+                    onChange={(event) =>
+                      onUpdateLayer(layer.id, { imagePath: event.target.value })
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="steel-button quiet-button whitespace-nowrap px-3 text-xs"
+                    onClick={() => setPickerLayerId(layer.id)}
+                  >
+                    Library
+                  </button>
+                </div>
+              </div>
               <label className="grid gap-1 text-sm text-cyan-100">
                 Target display
                 <select
@@ -517,6 +554,17 @@ function LayerEditor({
           ))}
         </div>
       </div>
+
+      {pickerLayerId ? (
+        <AssetPicker
+          title="Choose a floating layer image"
+          onPick={(ref) => {
+            onUpdateLayer(pickerLayerId, { imagePath: ref });
+            setPickerLayerId(null);
+          }}
+          onClose={() => setPickerLayerId(null)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -742,6 +790,8 @@ export function DmControlCenter() {
         </section>
 
         <HotkeyTable scenes={state.scenes} onActivate={handleActivateScene} />
+
+        <AssetLibrary />
 
         <SceneEditor
           scenes={state.scenes}
